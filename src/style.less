@@ -1,0 +1,94 @@
+
+@import "layout.less";
+
+@control-bar-bg: rgba(0, 0, 0, 0.6);
+@control-bar-height: 36px;
+
+@progress-bar-bg: rgba(255, 255, 255, 0.7);
+@progress-bar-height: 5px;
+@load-progress-bg: rgba(125, 125, 125, 0.7);
+@play-progress-bg: rgba(77, 208, 250, 0.8);
+
+@seek-handle-bg: #00F3FF;
+
+@loading-width: 56px;
+@loading-height: 64px;
+
+.video-player {
+
+    position: relative;
+
+    .load-spinner {
+
+        color: #FFF;
+        display: none;
+
+        position: absolute;
+        left: 50%;
+        top: 50%;
+
+        margin-left: -0.5 * @loading-width;
+        margin-top: -0.5 * @loading-height;
+
+    }
+
+    .time-control {
+        font-size: 12px;
+    }
+
+    .progress-bar {
+        background-color: @progress-bar-bg;
+        height: @progress-bar-height;
+        bottom: @control-bar-height;
+    }
+    .load-progress {
+        background-color: @load-progress-bg;
+
+    }
+
+    .play-progress {
+        background-color: @play-progress-bg;
+    }
+
+    .seek-handle {
+
+        @size: 2 * @progress-bar-height;
+
+        background-color: @seek-handle-bg;
+        width: @size;
+        height: @size;
+        border-radius: @size / 2;
+        margin-top: -2px;
+
+        box-shadow: 0px 0px 2px rgb(0, 83, 121);
+
+        &:hover {
+            background-color: lighten(@seek-handle-bg, 5%);
+            -webkit-transform: scale(1.5);
+        }
+    }
+
+    .control-bar {
+        background-color: @control-bar-bg;
+        height: @control-bar-height;
+        color: #FFF;
+    }
+
+    .button-control,
+    .mute-control,
+    .volume-control,
+    .fullscreen-control {
+        padding: 10px;
+    }
+
+    .mute-control,
+    .volume-control,
+    .fullscreen-control {
+        float: right;
+    }
+
+    .volume-control {
+        padding-top: 14px;
+    }
+
+}
