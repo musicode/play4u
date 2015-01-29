@@ -35,62 +35,62 @@ define(function (require, exports) {
      *
      * @type {string}
      */
-    exports.SELECTOR_CURRENT_TIME = '.current-time';
+    exports.CURRENT_TIME = '.current-time';
 
     /**
      * 显示总时间选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_DURATION = '.duration';
+    exports.DURATION = '.duration';
 
     /**
      * 加载进度条选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_LOAD_PROGRESS = '.load-progress';
+    exports.LOAD_PROGRESS = '.load-progress';
 
     /**
      * 播放进度条选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_PLAY_PROGRESS = '.play-progress';
+    exports.PLAY_PROGRESS = '.play-progress';
 
     /**
      * 进度条选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_PROGRESS_BAR = '.progress-bar';
+    exports.PROGRESS_BAR = '.progress-bar';
 
     /**
      * 进度拖拽手柄选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_SEEK_HANDLE = '.seek-handle';
+    exports.SEEK_HANDLE = '.seek-handle';
 
     /**
      * 音量条选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_VOLUME = 'input[name="volume"]';
+    exports.VOLUME = 'input[name="volume"]';
 
     /**
      * 加载动画选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_LOADING = '.load-spinner';
+    exports.LOADING = '.load-spinner';
 
     /**
      * 加载动画选择器
      *
      * @type {string}
      */
-    exports.SELECTOR_FULLSCREEN = '.fullscreen-control';
+    exports.FULLSCREEN = '.fullscreen-control';
 
 });
