@@ -218,20 +218,22 @@ define(function (require, exports) {
             var me = this;
             var mainVideo = me.mainVideo;
 
-            var titleVideo = lib.createVideo(me.title, me.shared);
+            var titleVideo =
+            me.titleVideo = lib.createVideo(me.title, me.shared);
 
             mainVideo.hide().after(titleVideo);
 
-            me.titleVideo = titleVideo;
-
             titleVideo
             .on(VideoEvent.PLAY_COMPLETE, function () {
+                me.isTitlePlayed = true;
                 me.setActiveVideo('main');
                 me.play();
             })
             .on(VideoEvent.VOLUME_CHANGE, function () {
                 me.refreshVolume();
             });
+
+            me.bindPlayPause(titleVideo);
 
         },
 
@@ -298,18 +300,6 @@ define(function (require, exports) {
             .on(VideoEvent.CAN_PLAY, function (e) {
                 element.find(selector.LOADING).hide();
             })
-            .on(VideoEvent.PLAY, function (e) {
-                element
-                    .find('.' + selector.CLASS_PLAY)
-                    .removeClass(selector.CLASS_PLAY)
-                    .addClass(selector.CLASS_PAUSE);
-            })
-            .on(VideoEvent.PAUSE, function (e) {
-                element
-                    .find('.' + selector.CLASS_PAUSE)
-                    .removeClass(selector.CLASS_PAUSE)
-                    .addClass(selector.CLASS_PLAY);
-            })
             .on(VideoEvent.PLAY_PROGRESS, function (e) {
                 me.seek(
                     me.getCurrentTime()
@@ -324,6 +314,9 @@ define(function (require, exports) {
             .on(VideoEvent.VOLUME_CHANGE, function () {
                 me.refreshVolume();
             });
+
+            me.bindPlayPause(mainVideo);
+
         },
 
         /**
@@ -334,20 +327,41 @@ define(function (require, exports) {
             var me = this;
 
             var mainVideo = me.mainVideo;
-            var creditVideo = lib.createVideo(me.credit, me.shared);
+            var creditVideo =
+            me.creditVideo = lib.createVideo(me.credit, me.shared);
 
             creditVideo.hide();
 
             mainVideo.after(creditVideo);
 
-            me.creditVideo = creditVideo;
-
-            mainVideo
+            creditVideo
             .on(VideoEvent.PLAY_COMPLETE, function () {
-                me.setActiveVideo('main');
+                me.pause();
             })
             .on(VideoEvent.VOLUME_CHANGE, function () {
                 me.refreshVolume();
+            });
+
+            me.bindPlayPause(creditVideo);
+
+        },
+
+        bindPlayPause: function (video) {
+
+            var element = this.element;
+
+            video
+            .on(VideoEvent.PLAY, function (e) {
+                element
+                    .find('.' + selector.CLASS_PLAY)
+                    .removeClass(selector.CLASS_PLAY)
+                    .addClass(selector.CLASS_PAUSE);
+            })
+            .on(VideoEvent.PAUSE, function (e) {
+                element
+                    .find('.' + selector.CLASS_PAUSE)
+                    .removeClass(selector.CLASS_PAUSE)
+                    .addClass(selector.CLASS_PLAY);
             });
 
         },
@@ -392,16 +406,14 @@ define(function (require, exports) {
 
             $.each(map, function (key, element) {
 
-                if (!element) {
-                    return;
-                }
-
-                if (key === video) {
-                    element.show();
-                    video = element;
-                }
-                else {
-                    element.hide();
+                if (element) {
+                    if (key === video) {
+                        element.show();
+                        video = element;
+                    }
+                    else {
+                        element.hide();
+                    }
                 }
 
             });
@@ -420,14 +432,26 @@ define(function (require, exports) {
          * 播放视频
          */
         play: function () {
-            this.video.play();
+
+            var me = this;
+            var video;
+
+            if (me.title && !me.isTitlePlayed) {
+                video = me.titleVideo;
+            }
+            else {
+                video = me.mainVideo;
+            }
+
+            video[0].play();
+
         },
 
         /**
          * 暂停视频
          */
         pause: function () {
-            this.video.pause();
+            this.mainVideo[0].pause();
         },
 
         /**
@@ -464,7 +488,7 @@ define(function (require, exports) {
          * @return {boolean}
          */
         canPlayType: function () {
-            return this.video.canPlayType;
+            return this.mainVideo[0].canPlayType;
         },
 
         /**
@@ -495,7 +519,7 @@ define(function (require, exports) {
          * @return {boolean}
          */
         isPaused: function () {
-            return this.video.paused;
+            return this.mainVideo[0].paused;
         },
 
         /**
@@ -504,7 +528,7 @@ define(function (require, exports) {
          * @return {boolean}
          */
         isPlayCompleted: function () {
-            return this.video.ended;
+            return this.mainVideo[0].ended;
         },
 
         /**
@@ -569,7 +593,7 @@ define(function (require, exports) {
          * @return {number}
          */
         getDuration: function () {
-            return this.video.duration;
+            return this.mainVideo[0].duration;
         },
 
         /**
@@ -595,7 +619,7 @@ define(function (require, exports) {
          * @return {number}  播放位置，单位为秒
          */
         getCurrentTime: function () {
-            return this.video.currentTime;
+            return this.mainVideo[0].currentTime;
         },
 
         /**
@@ -607,7 +631,7 @@ define(function (require, exports) {
 
             var me = this;
 
-            me.video.currentTime = time;
+            me.mainVideo[0].currentTime = time;
             me.seek(time);
 
         },
