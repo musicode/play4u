@@ -16,30 +16,11 @@ define(function (require, exports) {
      *
      * 组件采用 AMD 形式加载，不存在 domready 之后再执行的需求，
      * 如果非要强求顺序，可在业务代码中控制
-     *
-     * https://msdn.microsoft.com/zh-cn/library/hh924822
      */
 
-    /**
-     * 技术难点在于有片头片尾的情况
-     *
-     * 为了流畅的切换，通常是三个视频同时加载，同一时间只显示一个，隐藏其他两个
-     *
-     * 初始化时，如果 autoplay 为 true，会自动播放片头
-     *
-     * 播放片头时，只能控制音量，修改后的音量要应用到 正片 和 片尾，
-     * 触发 ended 事件自动播放正片
-     *
-     * 播放正片时，所有功能可用，触发 ended 事件自动播放片尾
-     *
-     * 播放片尾时，只能控制音量，修改后的音量要应用到 正片 和 片头
-     *
-     *
-     */
-
-    var VideoEvent = require('./VideoEvent');
     var lib = require('./lib');
     var selector = require('./selector');
+    var VideoEvent = require('./VideoEvent');
 
     var Draggable = require('cobble/helper/Draggable');
     var fullScreen = require('cobble/util/fullScreen');
@@ -110,7 +91,6 @@ define(function (require, exports) {
                 first.prop(props);
 
                 mainVideo.hide();
-
             }
 
             /**
@@ -170,18 +150,6 @@ define(function (require, exports) {
                 height: shared.height
             });
 
-            var progressBar = element.find(selector.PROGRESS_BAR);
-
-            var progressBarWidth;
-
-            // 为了提升性能，progressBarWidth 在使用前会计算一次
-            // 同时能保证取到的值是最新的
-            var pos2Time = function (pos) {
-                var percent = pos / progressBarWidth;
-                var time = percent * me.getDuration();
-                me.setCurrentTime(time);
-            };
-
             element
             .on('click', '.' + selector.CLASS_PLAY, function () {
                 me.play();
@@ -199,36 +167,29 @@ define(function (require, exports) {
                 fullScreen.enter();
             })
             .on('click', selector.PROGRESS_BAR, function (e) {
-                progressBarWidth = progressBar.width();
-                pos2Time(eventOffset(e).x);
+                me.setCurrentTime(eventOffset(e).x, true);
+            })
+            .on('click', selector.VOLUME_BAR, function (e) {
+                me.setVolume(eventOffset(e).x, true);
             });
 
             new Draggable({
                 element: element.find(selector.SEEK_HANDLE),
-                container: progressBar,
+                container: element.find(selector.PROGRESS_BAR),
                 axis: 'x',
                 silence: true,
-                onBeforeDrag: function () {
-                    progressBarWidth = progressBar.width();
-                },
                 onDrag: function (e, data) {
-                    pos2Time(data.left);
+                    me.setCurrentTime(data.left, true);
                 }
             });
 
-            var volume = element.find(selector.VOLUME);
-            var volumeHandle = element.find(selector.VOLUME_HANDLE);
-            var volumeWidth = volume.width();
-            var volumeHandleWidth = volumeHandle.width();
-
             new Draggable({
-                element: volumeHandle,
-                container: volume,
+                element: element.find(selector.VOLUME_HANDLE),
+                container: element.find(selector.VOLUME_BAR),
                 axis: 'x',
                 silence: true,
                 onDrag: function (e, data) {
-                    var value = data.left / (volumeWidth - volumeHandleWidth);
-                    me.setVolume(value);
+                    me.setVolume(data.left, true);
                 }
             });
 
@@ -293,7 +254,6 @@ define(function (require, exports) {
                 );
             });
 
-
             me.mainVideo = mainVideo;
 
         },
@@ -320,22 +280,23 @@ define(function (require, exports) {
         /**
          * 设置当前激活的视频
          *
-         * @param {number} index
+         * @param {number|jQuery} index
          */
         setActiveVideo: function (index) {
 
             var me = this;
 
-            // 解绑事件，为了以后各种广告考虑
             var prev = me.video;
             if (prev) {
                 prev.hide();
                 prev.off(VIDEO_EVENT);
             }
 
+            var list = me.list;
+
             if (index.jquery) {
                 $.each(
-                    me.list,
+                    list,
                     function (i, video) {
                         if (video === index) {
                             index = i;
@@ -345,13 +306,16 @@ define(function (require, exports) {
                 );
             }
 
-            var video = me.list[index];
+            if ($.type(index) !== 'number') {
+                throw new Error('setActiveVideo 参数错误');
+            }
+
+            var video = list[index];
 
             me.applyShared(video);
 
             video.show();
 
-            // 绑定事件
             listen(me, video);
 
             me.video = video;
@@ -370,7 +334,7 @@ define(function (require, exports) {
                 me.setActiveVideo(me.mainVideo);
             }
 
-            this.video[0].play();
+            me.video[0].play();
         },
 
         /**
@@ -378,37 +342,6 @@ define(function (require, exports) {
          */
         pause: function () {
             this.video[0].pause();
-        },
-
-        /**
-         * 跳到某位置
-         *
-         * @param {number} time 播放位置，单位为秒
-         */
-        seek: function (time) {
-
-            var me = this;
-            var element = me.element;
-
-            var currentTime = element.find(selector.CURRENT_TIME);
-            currentTime.text(
-                me.formatTime(time)
-            );
-
-            var duration = me.getDuration();
-            var percent = lib.percent(time, duration);
-
-            var playProgress = element.find(selector.PLAY_PROGRESS);
-            playProgress.width(
-                percent
-            );
-
-            var progressBar = element.find(selector.PROGRESS_BAR);
-            var seekHandle = element.find(selector.SEEK_HANDLE);
-            var width = progressBar.width() - seekHandle.width();
-            seekHandle.css({
-                left: (time / duration) * width
-            });
         },
 
         /**
@@ -426,10 +359,34 @@ define(function (require, exports) {
          * @param {number} value 音量值，从 0 到 1，0 表示静音
          */
         setVolume: function (value) {
+
+            var me = this;
+            var element = me.element;
+
+            var volumeBar = element.find(selector.VOLUME_BAR);
+            var volumeHandle = element.find(selector.VOLUME_HANDLE);
+
+            var volumeBarWidth = volumeBar.width();
+            var volumeHandleWidth = volumeHandle.width();
+            var width = volumeBarWidth - volumeHandleWidth;
+
+            var left;
+
+            if (arguments[1]) {
+                left = value;
+                value = left / width;
+            }
+            else {
+                left = value * width;
+            }
+
             if (value >= 0 && value <= 1) {
-                var me = this;
+
                 me.video.prop('volume', value);
                 me.shared.volume = value;
+
+                volumeHandle.css('left', left);
+
             }
         },
 
@@ -489,7 +446,7 @@ define(function (require, exports) {
          * @return {number}  播放位置，单位为秒
          */
         getCurrentTime: function () {
-            return this.video.prop('currentTime');
+            return this.mainVideo.prop('currentTime');
         },
 
         /**
@@ -500,10 +457,68 @@ define(function (require, exports) {
         setCurrentTime: function (time) {
 
             var me = this;
+            var element = me.element;
+            var duration = me.getDuration();
 
-            me.video.prop('currentTime', time);
-            me.seek(time);
+            var progressBar = element.find(selector.PROGRESS_BAR);
+            var seekHandle = element.find(selector.SEEK_HANDLE);
+            var progressBarWidth = progressBar.width();
+            var width = progressBarWidth - seekHandle.width();
 
+            var percent;
+            var left;
+
+            if (arguments[1]) {
+
+                left = time;
+
+                percent = left / progressBarWidth;
+                time = percent * duration;
+
+            }
+            else {
+                percent = time / duration;
+                left = percent * progressBarWidth;
+            }
+
+            me.mainVideo.prop('currentTime', time);
+            me.seek(time, left);
+        },
+
+        /**
+         * 跳到某位置
+         *
+         * @param {number} time 播放位置，单位为秒
+         * @param {number=} left 播放头位置，不传会自动计算，传了可减少计算量
+         */
+        seek: function (time, left) {
+
+            var me = this;
+            var element = me.element;
+
+            var currentTime = element.find(selector.CURRENT_TIME);
+            currentTime.text(
+                me.formatTime(time)
+            );
+
+            var duration = me.getDuration();
+            var percent = lib.percent(time, duration);
+
+            var playProgress = element.find(selector.PLAY_PROGRESS);
+            playProgress.width(
+                percent
+            );
+
+            if (left == null) {
+                var progressBar = element.find(selector.PROGRESS_BAR);
+                var seekHandle = element.find(selector.SEEK_HANDLE);
+                var width = progressBar.width() - seekHandle.width();
+                left = (time / duration) * width;
+            }
+
+            seekHandle.css({
+                left: left
+            });
         },
 
         /**
@@ -513,12 +528,10 @@ define(function (require, exports) {
          * @return {string}
          */
         formatTime: function (time) {
-
             return lib.formatTime(
                 time,
                 this.getDuration() / lib.TIME_HOUR >= 1
             );
-
         },
 
         /**
@@ -538,7 +551,6 @@ define(function (require, exports) {
                     }
                 }
             );
-
         }
 
     };

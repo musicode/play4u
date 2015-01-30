@@ -77,7 +77,7 @@ define(function (require, exports) {
      *
      * @type {string}
      */
-    exports.VOLUME = '.volume-control';
+    exports.VOLUME_BAR = '.volume-bar';
 
     /**
      * 音量手柄选择器
