@@ -55,8 +55,8 @@ define(function (require, exports) {
      * @property {number} options.width
      * @property {number} options.height
      *
-     * @property {string=} options.title 片头视频地址
-     * @property {string=} options.credit 片尾视频地址
+     * @property {(string|Array.<string>)=} options.titles 片头视频地址
+     * @property {(string|Array.<string>)=} options.credits 片尾视频地址
      */
     function VideoPlayer(options) {
         $.extend(this, VideoPlayer.defaultOptions, options);
@@ -67,6 +67,9 @@ define(function (require, exports) {
 
         constructor: VideoPlayer,
 
+        /**
+         * 初始化播放器
+         */
         init: function () {
 
             var me = this;
@@ -76,23 +79,48 @@ define(function (require, exports) {
 
             me.initMain();
 
-            var hasTitle = me.title;
-            var hasCredit = me.credit;
+            var mainVideo = me.mainVideo;
 
-            if (hasTitle) {
-                me.initTitle();
+            me.titles = lib.toArray(me.titles);
+            me.credits = lib.toArray(me.credits);
+
+            var hasTitles = me.titles.length > 0;
+            var hasCredits = me.credits.length > 0;
+
+            if (hasTitles) {
+                me.initTitles();
             }
-            if (hasCredit) {
-                me.initCredit();
+            if (hasCredits) {
+                me.initCredits();
             }
 
-            me.setActiveVideo(
-                hasTitle ? PART_TITLE : PART_MAIN
-            );
+            if (hasTitles) {
 
-            if (hasTitle && me.autoplay) {
-                me.titleVideo.prop('autoplay', true);
+                var first = me.titles[0];
+                var props = { };
+
+                if (me.autoplay) {
+                    props.autoplay = true;
+                    mainVideo.prop('autoplay', false);
+                }
+                if (me.poster) {
+                    props.poster = me.poster;
+                }
+
+                first.prop(props);
+
+                mainVideo.hide();
+
             }
+
+            /**
+             * 当前播放列表
+             *
+             * @type {Array}
+             */
+            me.list = me.titles.concat([ mainVideo ], me.credits);
+
+            me.setActiveVideo(0);
 
         },
 
@@ -108,23 +136,14 @@ define(function (require, exports) {
              *
              * 包括 controls width height volume muted
              *
-             * @inner
              * @type {Object}
              */
-            var shared = {
-                controls: false
-            };
-
-            $.each(
-                [ 'width', 'height' ],
-                function (index, name) {
-                    if (me[name] != null) {
-                        shared[name] = me[name];
-                    }
-                }
-            );
-
-            me.shared = shared;
+            me.shared = $.extend(
+                            {
+                                controls: false
+                            },
+                            lib.fetch(me, [ 'width', 'height' ])
+                        );
 
         },
 
@@ -218,15 +237,19 @@ define(function (require, exports) {
         /**
          * 初始化片头
          */
-        initTitle: function () {
+        initTitles: function () {
 
             var me = this;
 
-            var titleVideo = lib.createVideo(me.title, me.shared);
+            me.titles =
 
-            me.mainVideo.after(titleVideo);
-
-            me.titleVideo = titleVideo;
+            me.titles.map(
+                function (title) {
+                    var video = lib.createVideo(title, me.shared);
+                    me.mainVideo.after(video);
+                    return video;
+                }
+            );
 
         },
 
@@ -236,23 +259,40 @@ define(function (require, exports) {
         initMain: function () {
 
             var me = this;
-
             var element = me.element;
-
-            // 正片
             var mainVideo = element.find('video');
 
-            // 应用于正片的属性
-            var props = lib.fetch(me, [ 'src', 'poster', 'autoplay', 'loop' ]);
+            mainVideo.prop(
+                $.extend(
+                    lib.fetch(me, [ 'src', 'poster', 'autoplay', 'loop' ]),
+                    me.shared
+                )
+            );
 
-            $.extend(props, me.shared);
+            var duration;
 
-            if (me.title && props.autoplay) {
-                // 先播放片头
-                props.autoplay = false;
-            }
+            mainVideo
+            .one(VideoEvent.LOAD_META_COMPLETE, function () {
+                duration = mainVideo.prop('duration');
+                me.setDuration(duration);
+            })
+            .on(VideoEvent.LOAD_PROGRESS, function () {
+                var buffer = this.buffered;
+                if (buffer.length > 0) {
+                    var end = buffer.end(0);
+                    element
+                        .find(selector.LOAD_PROGRESS)
+                        .width(
+                            lib.percent(end, duration)
+                        );
+                }
+            })
+            .on(VideoEvent.PLAY_PROGRESS, function () {
+                me.seek(
+                    me.getCurrentTime()
+                );
+            });
 
-            mainVideo.prop(props);
 
             me.mainVideo = mainVideo;
 
@@ -261,92 +301,61 @@ define(function (require, exports) {
         /**
          * 初始化片尾
          */
-        initCredit: function () {
+        initCredits: function () {
 
             var me = this;
 
-            var creditVideo = lib.createVideo(me.credit, me.shared);
+            me.credits =
 
-            me.mainVideo.after(creditVideo);
-
-            me.creditVideo = creditVideo;
-
-        },
-
-
-        /**
-         * 获得当前激活状态的视频
-         *
-         * @return {string} 返回值有三个：title main credit
-         */
-        getActiveVideo: function () {
-
-            var me = this;
-            var video = me.video;
-
-            if (video === me.mainVideo[0]) {
-                return PART_TITLE;
-            }
-            else if (video === me.titleVideo[0]) {
-                return PART_MAIN;
-            }
-            else if (video === me.creditVideo[0]) {
-                return PART_CREDIT;
-            }
+            me.credits.map(
+                function (credit) {
+                    var video = lib.createVideo(credit, me.shared);
+                    me.mainVideo.after(video);
+                    return video;
+                }
+            );
 
         },
 
         /**
          * 设置当前激活的视频
          *
-         * @param {string} video 可选值有三个：title main credit
+         * @param {number} index
          */
-        setActiveVideo: function (video) {
+        setActiveVideo: function (index) {
 
             var me = this;
-            var name = video;
 
-            var map = { }
-
-            map[PART_TITLE] = me.titleVideo;
-            map[PART_MAIN] = me.mainVideo;
-            map[PART_CREDIT] = me.creditVideo;
-
-            $.each(map, function (key, element) {
-
-                if (element) {
-                    if (key === video) {
-                        element.show();
-                        video = element;
-                    }
-                    else {
-                        element.hide();
-                    }
-                }
-
-            });
-
-            if (!video.jquery) {
-                throw new Error('setActiveVideo 参数错误');
+            // 解绑事件，为了以后各种广告考虑
+            var prev = me.video;
+            if (prev) {
+                prev.hide();
+                prev.off(VIDEO_EVENT);
             }
+
+            if (index.jquery) {
+                $.each(
+                    me.list,
+                    function (i, video) {
+                        if (video === index) {
+                            index = i;
+                            return false;
+                        }
+                    }
+                );
+            }
+
+            var video = me.list[index];
 
             me.applyShared(video);
 
-            if (me.video) {
-                me.video.off();
-            }
+            video.show();
 
-            listen(
-                $.extend(
-                    {
-                        player: me,
-                        video: video
-                    },
-                    videoListener[name]
-                )
-            );
+            // 绑定事件
+            listen(me, video);
 
             me.video = video;
+            me.index = index;
 
         },
 
@@ -357,18 +366,18 @@ define(function (require, exports) {
 
             var me = this;
 
-            if (me.isCreditPlayed) {
-                me.setActiveVideo(PART_MAIN);
+            if (me.index === me.list.length) {
+                me.setActiveVideo(me.mainVideo);
             }
 
-            me.video[0].play();
+            this.video[0].play();
         },
 
         /**
          * 暂停视频
          */
         pause: function () {
-            this.mainVideo[0].pause();
+            this.video[0].pause();
         },
 
         /**
@@ -403,21 +412,12 @@ define(function (require, exports) {
         },
 
         /**
-         * 视频文件是否可播放
-         *
-         * @return {boolean}
-         */
-        canPlayType: function () {
-            return this.mainVideo[0].canPlayType;
-        },
-
-        /**
          * 获取音量
          *
          * @return {number}
          */
         getVolume: function () {
-            return this.video[0].volume;
+            return this.video.prop('volume');
         },
 
         /**
@@ -428,27 +428,9 @@ define(function (require, exports) {
         setVolume: function (value) {
             if (value >= 0 && value <= 1) {
                 var me = this;
-                me.video[0].volume =
+                me.video.prop('volume', value);
                 me.shared.volume = value;
             }
-        },
-
-        /**
-         * 是否暂停
-         *
-         * @return {boolean}
-         */
-        isPaused: function () {
-            return this.mainVideo[0].paused;
-        },
-
-        /**
-         * 是否播放结束
-         *
-         * @return {boolean}
-         */
-        isPlayCompleted: function () {
-            return this.mainVideo[0].ended;
         },
 
         /**
@@ -457,7 +439,7 @@ define(function (require, exports) {
          * @return {boolean}
          */
         isMuted: function () {
-            return this.video[0].muted;
+            return this.video.prop('muted');
         },
 
         /**
@@ -469,7 +451,7 @@ define(function (require, exports) {
 
             var me = this;
 
-            me.video[0].muted =
+            me.video.prop('muted', muted);
             me.shared.muted = muted;
 
         },
@@ -480,7 +462,7 @@ define(function (require, exports) {
          * @return {number}
          */
         getDuration: function () {
-            return this.mainVideo[0].duration;
+            return this.mainVideo.prop('duration');
         },
 
         /**
@@ -493,6 +475,7 @@ define(function (require, exports) {
         setDuration: function (time) {
 
             var me = this;
+
             var target = me.element.find(selector.DURATION);
 
             target.text(
@@ -506,7 +489,7 @@ define(function (require, exports) {
          * @return {number}  播放位置，单位为秒
          */
         getCurrentTime: function () {
-            return this.mainVideo[0].currentTime;
+            return this.video.prop('currentTime');
         },
 
         /**
@@ -518,7 +501,7 @@ define(function (require, exports) {
 
             var me = this;
 
-            me.mainVideo[0].currentTime = time;
+            me.video.prop('currentTime', time);
             me.seek(time);
 
         },
@@ -570,112 +553,44 @@ define(function (require, exports) {
 
     };
 
-    /**
-     * 片头常量名
-     *
-     * @inner
-     * @type {string}
-     */
-    var PART_TITLE = 'title';
+    var VIDEO_EVENT = '.videoplayer';
 
-    /**
-     * 正片常量名
-     *
-     * @inner
-     * @type {string}
-     */
-    var PART_MAIN = 'main';
-
-    /**
-     * 片尾常量名
-     *
-     * @inner
-     * @type {string}
-     */
-    var PART_CREDIT = 'credit';
-
-
-
-    var videoListener = { };
-
-    videoListener[PART_TITLE] = {
-        onPlayComplete: function () {
-            this.setActiveVideo(PART_MAIN);
-            this.play();
-        }
-    };
-
-    videoListener[PART_MAIN] = {
-        onLoadProgress: function (loaded) {
-            this.element
-            .find(selector.LOAD_PROGRESS)
-            .width(
-                lib.percent(loaded, this.getDuration())
-            );
-        },
-        onPlayProgress: function () {
-            this.seek(
-                this.getCurrentTime()
-            );
-        },
-        onPlayComplete: function () {
-            if (this.credit) {
-                this.setActiveVideo(PART_CREDIT);
-                this.play();
-            }
-        }
-    };
-
-    videoListener[PART_CREDIT] = {
-        onPlayComplete: function () {
-            this.isCreditPlayed = true;
-            this.pause();
-        }
-    };
 
     /**
      * 提供一个工具函数，用于统一处理视频事件
      *
      * @inner
-     * @param {Object} options
-     * @property {jQuery} options.video 视频元素
-     * @property {VideoPlayer} options.player 播放器实例
-     * @property {Function=} options.onLoadMetaComplete
-     * @property {Function=} options.onLoadProgress
-     * @property {Function=} options.onPlayProgress
-     * @property {Function=} options.onPlayComplete
-     *
+     * @param {VideoPlayer} player 播放器实例
+     * @param {jQuery} video 视频元素
      */
-    function listen(options) {
+    function listen(player, video) {
 
-        var player = options.player;
-        var video = options.video;
         var element = player.element;
 
         var errorHandler = function (e) {
-            console.log('error');
+            console.log('error type：' + e.type);
         };
 
         video
-        .on(VideoEvent.PLAY, function (e) {
+        .on(VideoEvent.PLAY + VIDEO_EVENT, function () {
             element
                 .find('.' + selector.CLASS_PLAY)
                 .removeClass(selector.CLASS_PLAY)
                 .addClass(selector.CLASS_PAUSE);
         })
-        .on(VideoEvent.PAUSE, function (e) {
+        .on(VideoEvent.PAUSE + VIDEO_EVENT, function () {
             element
                 .find('.' + selector.CLASS_PAUSE)
                 .removeClass(selector.CLASS_PAUSE)
                 .addClass(selector.CLASS_PLAY);
         })
-        .on(VideoEvent.PLAY_WAITING, function (e) {
+        .on(VideoEvent.PLAY_WAITING + VIDEO_EVENT, function () {
             element.find(selector.LOADING).show();
         })
-        .on(VideoEvent.CAN_PLAY, function (e) {
+        .on(VideoEvent.CAN_PLAY + VIDEO_EVENT, function () {
             element.find(selector.LOADING).hide();
         })
-        .on(VideoEvent.VOLUME_CHANGE, function () {
+        .on(VideoEvent.VOLUME_CHANGE + VIDEO_EVENT, function () {
 
             var mutedClass = selector.CLASS_MUTED;
             var unmutedClass = selector.CLASS_UNMUTED;
@@ -695,44 +610,21 @@ define(function (require, exports) {
             }
 
         })
-        .on(VideoEvent.LOAD_ABORT, errorHandler)
-        .on(VideoEvent.LOAD_ERROR, errorHandler)
-        .on(VideoEvent.LOAD_STALLED, errorHandler);
+        .on(VideoEvent.PLAY_COMPLETE + VIDEO_EVENT, function () {
 
-        var onLoadProgress = options.onLoadProgress;
-        if ($.isFunction(onLoadProgress)) {
-            video.on(VideoEvent.LOAD_PROGRESS, function (e) {
-                var buffer = this.buffered;
-                if (buffer.length > 0) {
-                    var end = buffer.end(0);
-                    onLoadProgress.call(player, end);
-                }
-            });
-        }
+            var index = player.index + 1;
 
-        var onLoadMetaComplete = options.onLoadMetaComplete;
-        if ($.isFunction(onLoadMetaComplete)) {
-            video.on(
-                VideoEvent.LOAD_META_COMPLETE,
-                $.proxy(onLoadMetaComplete, player)
-            );
-        }
+            if (index < player.list.length) {
+                player.setActiveVideo(index);
+                player.play();
+            }
 
-        var onPlayProgress = options.onPlayProgress;
-        if ($.isFunction(onPlayProgress)) {
-            video.on(
-                VideoEvent.PLAY_PROGRESS,
-                $.proxy(onPlayProgress, player)
-            );
-        }
+            player.index = index;
 
-        var onPlayComplete = options.onPlayComplete;
-        if ($.isFunction(onPlayComplete)) {
-            video.on(
-                VideoEvent.PLAY_COMPLETE,
-                $.proxy(onPlayComplete, player)
-            );
-        }
+        })
+        .on(VideoEvent.LOAD_ABORT + VIDEO_EVENT, errorHandler)
+        .on(VideoEvent.LOAD_ERROR + VIDEO_EVENT, errorHandler)
+        .on(VideoEvent.LOAD_STALLED + VIDEO_EVENT, errorHandler);
 
     };
 

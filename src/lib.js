@@ -78,7 +78,7 @@ define(function (require, exports) {
      */
     exports.createVideo = function (url, property) {
 
-        var video = $('<video></video>');
+        var video = $('<video style="display: none;"></video>');
 
         property = $.extend(true, { }, property);
         property.src = url;
@@ -116,6 +116,19 @@ define(function (require, exports) {
 
         return result.map(lpad).join(':');
 
+    };
+
+    /**
+     * 把 value 转成数组
+     *
+     * @param {Array|string} value
+     * @return {Array}
+     */
+    exports.toArray = function (value) {
+        if ($.type(value) === 'string') {
+            value = [ value ];
+        }
+        return $.isArray(value) ? value : [ ];
     };
 
     /**
