@@ -70,25 +70,26 @@
 
     .control-bar {
         background-color: @control-bar-bg;
-        height: @control-bar-height;
+        height: @control-bar-height - 20px;
+        padding: 10px 0;
         color: #FFF;
     }
 
+
     .button-control,
-    .mute-control,
-    .volume-control,
-    .fullscreen-control {
-        padding: 10px;
+    .time-control {
+        margin: 0 10px;
     }
 
     .mute-control,
     .volume-control,
     .fullscreen-control {
         float: right;
+        margin: 0 10px;
     }
 
     .volume-control {
-        padding-top: 14px;
+        margin-top: 4px;
     }
 
 }

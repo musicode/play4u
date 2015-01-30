@@ -77,7 +77,14 @@ define(function (require, exports) {
      *
      * @type {string}
      */
-    exports.VOLUME = 'input[name="volume"]';
+    exports.VOLUME = '.volume-control';
+
+    /**
+     * 音量手柄选择器
+     *
+     * @type {string}
+     */
+    exports.VOLUME_HANDLE = '.volume-handle';
 
     /**
      * 加载动画选择器
