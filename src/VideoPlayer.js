@@ -234,8 +234,14 @@ define(function (require, exports) {
 
             mainVideo
             .one(VideoEvent.LOAD_META_COMPLETE, function () {
+
                 duration = mainVideo.prop('duration');
                 me.setDuration(duration);
+
+                me.setVolume(
+                    me.getVolume()
+                );
+
             })
             .on(VideoEvent.LOAD_PROGRESS, function () {
                 var buffer = this.buffered;
@@ -566,7 +572,6 @@ define(function (require, exports) {
     };
 
     var VIDEO_EVENT = '.videoplayer';
-
 
     /**
      * 提供一个工具函数，用于统一处理视频事件
