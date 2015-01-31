@@ -153,6 +153,9 @@ define(function (require, exports) {
 
             var quality = me.quality;
 
+            var progressBar = element.find(selector.PROGRESS_BAR);
+            var volumeBar = element.find(selector.VOLUME_BAR);
+
             element
             .on('click', '.' + selector.CLASS_PLAY, function () {
                 me.play();
@@ -170,10 +173,12 @@ define(function (require, exports) {
                 fullScreen.enter();
             })
             .on('click', selector.PROGRESS_BAR, function (e) {
-                me.setCurrentTime(eventOffset(e).x, true);
+                var x = e.pageX - progressBar.offset().left;
+                me.setCurrentTime(x, true);
             })
             .on('click', selector.VOLUME_BAR, function (e) {
-                me.setVolume(eventOffset(e).x, true);
+                var x = e.pageX - volumeBar.offset().left;
+                me.setVolume(x, true);
             })
             .on('click', selector.QUALITY_LOW, function () {
                 me.mainVideo.prop('src', quality.low);
@@ -195,12 +200,12 @@ define(function (require, exports) {
                     hide: {
                         trigger: 'click'
                     }
-                })
+                });
             }
 
             new Draggable({
                 element: element.find(selector.SEEK_HANDLE),
-                container: element.find(selector.PROGRESS_BAR),
+                container: progressBar,
                 axis: 'x',
                 silence: true,
                 onDrag: function (e, data) {
@@ -210,7 +215,7 @@ define(function (require, exports) {
 
             new Draggable({
                 element: element.find(selector.VOLUME_HANDLE),
-                container: element.find(selector.VOLUME_BAR),
+                container: volumeBar,
                 axis: 'x',
                 silence: true,
                 onDrag: function (e, data) {
