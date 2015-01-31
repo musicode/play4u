@@ -154,7 +154,43 @@ define(function (require, exports) {
             var quality = me.quality;
 
             var progressBar = element.find(selector.PROGRESS_BAR);
+            var seekHandle = element.find(selector.SEEK_HANDLE);
+
             var volumeBar = element.find(selector.VOLUME_BAR);
+            var volumeHandle = element.find(selector.VOLUME_HANDLE);
+
+            var pos2Time = function (pos) {
+
+                var progressBarWidth = progressBar.innerWidth();
+                var seekHandleWidth = seekHandle.outerWidth(true);
+
+                var max = progressBarWidth - seekHandleWidth;
+
+                if (pos > max) {
+                    pos = max;
+                }
+
+                me.setCurrentTime(
+                    (pos / max) * me.getDuration()
+                );
+            };
+
+            var pos2Volume = function (pos) {
+
+                var volumeBarWidth = volumeBar.innerWidth();
+                var volumeHandleWidth = volumeHandle.outerWidth(true);
+
+                var max = volumeBarWidth - volumeHandleWidth;
+
+                if (pos > max) {
+                    pos = max;
+                }
+
+                me.setVolume(
+                    pos / max
+                );
+
+            };
 
             element
             .on('click', '.' + selector.CLASS_PLAY, function () {
@@ -174,11 +210,11 @@ define(function (require, exports) {
             })
             .on('click', selector.PROGRESS_BAR, function (e) {
                 var x = e.pageX - progressBar.offset().left;
-                me.setCurrentTime(x, true);
+                pos2Time(x);
             })
             .on('click', selector.VOLUME_BAR, function (e) {
                 var x = e.pageX - volumeBar.offset().left;
-                me.setVolume(x, true);
+                pos2Volume(x);
             })
             .on('click', selector.QUALITY_LOW, function () {
                 me.mainVideo.prop('src', quality.low);
@@ -204,22 +240,22 @@ define(function (require, exports) {
             }
 
             new Draggable({
-                element: element.find(selector.SEEK_HANDLE),
+                element: seekHandle,
                 container: progressBar,
                 axis: 'x',
                 silence: true,
                 onDrag: function (e, data) {
-                    me.setCurrentTime(data.left, true);
+                    pos2Time(data.left);
                 }
             });
 
             new Draggable({
-                element: element.find(selector.VOLUME_HANDLE),
+                element: volumeHandle,
                 container: volumeBar,
                 axis: 'x',
                 silence: true,
                 onDrag: function (e, data) {
-                    me.setVolume(data.left, true);
+                    pos2Volume(data.left);
                 }
             });
 
@@ -268,7 +304,7 @@ define(function (require, exports) {
                 duration = mainVideo.prop('duration');
                 me.setDuration(duration);
 
-                me.setVolume(
+                me.updateVolume(
                     me.getVolume()
                 );
 
@@ -285,7 +321,7 @@ define(function (require, exports) {
                 }
             })
             .on(VideoEvent.PLAY_PROGRESS, function () {
-                me.seek(
+                me.updateCurrentTime(
                     me.getCurrentTime()
                 );
             });
@@ -397,36 +433,45 @@ define(function (require, exports) {
         setVolume: function (value) {
 
             var me = this;
-            var element = me.element;
-
-            var volumeBar = element.find(selector.VOLUME_BAR);
-            var volumeHandle = element.find(selector.VOLUME_HANDLE);
-
-            var volumeBarWidth = volumeBar.innerWidth();
-            var volumeHandleWidth = volumeHandle.outerWidth(true);
-            var width = volumeBarWidth - volumeHandleWidth;
-
-            if (arguments[1]) {
-                value = value / width;
-            }
 
             if (value >= 0 && value <= 1) {
 
                 me.video.prop('volume', value);
                 me.shared.volume = value;
 
-                var left = value * volumeBarWidth - volumeHandleWidth / 2;
-
-                if (left < 0) {
-                    left = 0;
-                }
-                else if (volumeBarWidth - left < volumeHandleWidth) {
-                    left = volumeBarWidth - volumeHandleWidth;
-                }
-
-                volumeHandle.css('left', left);
+                me.updateVolume(value);
 
             }
+        },
+
+        /**
+         * 更新音量的 DOM
+         *
+         * @param {number} volume 音量，0 - 1
+         */
+        updateVolume: function (volume) {
+
+            var element = this.element;
+
+            var volumeBar = element.find(selector.VOLUME_BAR);
+            var volumeHandle = element.find(selector.VOLUME_HANDLE);
+
+            var volumeBarWidth = volumeBar.innerWidth();
+            var volumeHandleWidth = volumeHandle.outerWidth(true);
+
+            var left = volume * volumeBarWidth;
+
+            left -= volumeHandleWidth;
+
+            if (left < 0) {
+                left = 0;
+            }
+            else if (left + volumeHandleWidth > volumeBarWidth) {
+                left = volumeBarWidth - volumeHandleWidth;
+            }
+
+            volumeHandle.css('left', left);
+
         },
 
         /**
@@ -496,31 +541,17 @@ define(function (require, exports) {
         setCurrentTime: function (time) {
 
             var me = this;
-            var element = me.element;
-            var duration = me.getDuration();
-
-            if (arguments[1]) {
-
-                var progressBar = element.find(selector.PROGRESS_BAR);
-                var seekHandle = element.find(selector.SEEK_HANDLE);
-                var progressBarWidth = progressBar.innerWidth();
-                var seekHandleWidth = seekHandle.outerWidth(true);
-
-                var percent = time / (progressBarWidth - seekHandleWidth);
-                time = percent * duration;
-
-            }
 
             me.mainVideo.prop('currentTime', time);
-            me.seek(time);
+            me.updateCurrentTime(time);
         },
 
         /**
-         * 跳到某位置
+         * 更新当前播放时间的 DOM
          *
          * @param {number} time 播放位置，单位为秒
          */
-        seek: function (time) {
+        updateCurrentTime: function (time) {
 
             var me = this;
             var element = me.element;
@@ -545,7 +576,7 @@ define(function (require, exports) {
 
             var left = (time / duration) * progressBarWidth;
 
-            left -= seekHandleWidth / 2;
+            left -= seekHandleWidth;
 
             if (left < 0) {
                 left = 0;
