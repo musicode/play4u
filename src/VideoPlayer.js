@@ -27,14 +27,17 @@ define(function (require, exports) {
     var fullScreen = require('cobble/util/fullScreen');
 
     /**
+     * 视频播放器
+     *
+     * @constructor
      * @param {Object} options
-     * @property {jQuery} options.element
-     * @property {string} options.src
-     * @property {string=} options.poster
-     * @property {boolean=} options.autoplay
+     * @property {jQuery} options.element 容器元素
+     * @property {string} options.src 视频地址
+     * @property {string=} options.poster 封面图片
+     * @property {boolean=} options.autoplay 是否自动播放
      * @property {boolean=} options.loop 是否循环播放
-     * @property {number|string} options.width
-     * @property {number|string} options.height
+     * @property {number|string} options.width 视频宽度
+     * @property {number|string} options.height 视频高度
      * @property {Object=} options.quality 画质
      * @property {string=} options.quality.low 标清画质
      * @property {string=} options.quality.high 高清画质
