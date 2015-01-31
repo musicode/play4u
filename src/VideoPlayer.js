@@ -402,24 +402,27 @@ define(function (require, exports) {
             var volumeBar = element.find(selector.VOLUME_BAR);
             var volumeHandle = element.find(selector.VOLUME_HANDLE);
 
-            var volumeBarWidth = volumeBar.width();
-            var volumeHandleWidth = volumeHandle.width();
+            var volumeBarWidth = volumeBar.innerWidth();
+            var volumeHandleWidth = volumeHandle.outerWidth(true);
             var width = volumeBarWidth - volumeHandleWidth;
 
-            var left;
-
             if (arguments[1]) {
-                left = value;
-                value = left / width;
-            }
-            else {
-                left = value * width;
+                value = value / width;
             }
 
             if (value >= 0 && value <= 1) {
 
                 me.video.prop('volume', value);
                 me.shared.volume = value;
+
+                var left = value * volumeBarWidth - volumeHandleWidth / 2;
+
+                if (left < 0) {
+                    left = 0;
+                }
+                else if (volumeBarWidth - left < volumeHandleWidth) {
+                    left = volumeBarWidth - volumeHandleWidth;
+                }
 
                 volumeHandle.css('left', left);
 
@@ -496,37 +499,28 @@ define(function (require, exports) {
             var element = me.element;
             var duration = me.getDuration();
 
-            var progressBar = element.find(selector.PROGRESS_BAR);
-            var seekHandle = element.find(selector.SEEK_HANDLE);
-            var progressBarWidth = progressBar.width();
-
-            var percent;
-            var left;
-
             if (arguments[1]) {
 
-                left = time;
+                var progressBar = element.find(selector.PROGRESS_BAR);
+                var seekHandle = element.find(selector.SEEK_HANDLE);
+                var progressBarWidth = progressBar.innerWidth();
+                var seekHandleWidth = seekHandle.outerWidth(true);
 
-                percent = left / progressBarWidth;
+                var percent = time / (progressBarWidth - seekHandleWidth);
                 time = percent * duration;
 
             }
-            else {
-                percent = time / duration;
-                left = percent * progressBarWidth;
-            }
 
             me.mainVideo.prop('currentTime', time);
-            me.seek(time, left);
+            me.seek(time);
         },
 
         /**
          * 跳到某位置
          *
          * @param {number} time 播放位置，单位为秒
-         * @param {number=} left 播放头位置，不传会自动计算，传了可减少计算量
          */
-        seek: function (time, left) {
+        seek: function (time) {
 
             var me = this;
             var element = me.element;
@@ -544,17 +538,24 @@ define(function (require, exports) {
                 percent
             );
 
+            var progressBar = element.find(selector.PROGRESS_BAR);
             var seekHandle = element.find(selector.SEEK_HANDLE);
+            var progressBarWidth = progressBar.innerWidth();
+            var seekHandleWidth = seekHandle.outerWidth(true);
 
-            if (left == null) {
-                var progressBar = element.find(selector.PROGRESS_BAR);
-                var width = progressBar.width() - seekHandle.width();
-                left = (time / duration) * width;
+            var left = (time / duration) * progressBarWidth;
+
+            left -= seekHandleWidth / 2;
+
+            if (left < 0) {
+                left = 0;
+            }
+            else if (progressBarWidth - left < seekHandleWidth) {
+                left = progressBarWidth - seekHandleWidth;
             }
 
-            seekHandle.css({
-                left: left
-            });
+            seekHandle.css('left', left);
+
         },
 
         /**
