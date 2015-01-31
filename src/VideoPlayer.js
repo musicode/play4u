@@ -22,6 +22,7 @@ define(function (require, exports) {
     var selector = require('./selector');
     var VideoEvent = require('./VideoEvent');
 
+    var Popup = require('cobble/helper/Popup');
     var Draggable = require('cobble/helper/Draggable');
     var fullScreen = require('cobble/util/fullScreen');
     var eventOffset = require('cobble/function/eventOffset');
@@ -150,6 +151,8 @@ define(function (require, exports) {
                 height: shared.height
             });
 
+            var quality = me.quality;
+
             element
             .on('click', '.' + selector.CLASS_PLAY, function () {
                 me.play();
@@ -171,7 +174,29 @@ define(function (require, exports) {
             })
             .on('click', selector.VOLUME_BAR, function (e) {
                 me.setVolume(eventOffset(e).x, true);
+            })
+            .on('click', selector.QUALITY_LOW, function () {
+                me.mainVideo.prop('src', quality.low);
+            })
+            .on('click', selector.QUALITY_HIGH, function () {
+                me.mainVideo.prop('src', quality.high);
+            })
+            .on('click', selector.QUALITY_SUPER, function () {
+                me.mainVideo.prop('src', quality.super);
             });
+
+            if (quality) {
+                new Popup({
+                    element: element.find(selector.QUALITY),
+                    layer: element.find(selector.QUALITY_LAYER),
+                    show: {
+                        trigger: 'click'
+                    },
+                    hide: {
+                        trigger: 'click'
+                    }
+                })
+            }
 
             new Draggable({
                 element: element.find(selector.SEEK_HANDLE),
@@ -469,7 +494,6 @@ define(function (require, exports) {
             var progressBar = element.find(selector.PROGRESS_BAR);
             var seekHandle = element.find(selector.SEEK_HANDLE);
             var progressBarWidth = progressBar.width();
-            var width = progressBarWidth - seekHandle.width();
 
             var percent;
             var left;
@@ -515,9 +539,10 @@ define(function (require, exports) {
                 percent
             );
 
+            var seekHandle = element.find(selector.SEEK_HANDLE);
+
             if (left == null) {
                 var progressBar = element.find(selector.PROGRESS_BAR);
-                var seekHandle = element.find(selector.SEEK_HANDLE);
                 var width = progressBar.width() - seekHandle.width();
                 left = (time / duration) * width;
             }
@@ -571,6 +596,12 @@ define(function (require, exports) {
 
     };
 
+    /**
+     * 视频事件，用于定义命名空间
+     *
+     * @inner
+     * @type {string}
+     */
     var VIDEO_EVENT = '.videoplayer';
 
     /**

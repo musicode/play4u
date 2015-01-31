@@ -1,30 +1,34 @@
+/**
+ * @file 选择器，可配置
+ * @author musicode
+ */
 define(function (require, exports) {
 
     'use strict';
 
     /**
-     * 播放按钮选择器
+     * 播放按钮 class
      *
      * @type {string}
      */
     exports.CLASS_PLAY = 'fa-play';
 
     /**
-     * 暂停按钮选择器
+     * 暂停按钮  class
      *
      * @type {string}
      */
     exports.CLASS_PAUSE = 'fa-pause';
 
     /**
-     * 非静音状态选择器
+     * 非静音状态 class
      *
      * @type {string}
      */
     exports.CLASS_UNMUTED = 'fa-volume-up';
 
     /**
-     * 静音状态选择器
+     * 静音状态 class
      *
      * @type {string}
      */
@@ -99,5 +103,40 @@ define(function (require, exports) {
      * @type {string}
      */
     exports.FULLSCREEN = '.fullscreen-control';
+
+    /**
+     * 画质图标选择器
+     *
+     * @type {string}
+     */
+    exports.QUALITY = '.quality-control';
+
+    /**
+     * 画质浮层选择器
+     *
+     * @type {string}
+     */
+    exports.QUALITY_LAYER = '.quality-control ul';
+
+    /**
+     * 标清画质选择器
+     *
+     * @type {string}
+     */
+    exports.QUALITY_LOW = '.quality-low';
+
+    /**
+     * 高清画质选择器
+     *
+     * @type {string}
+     */
+    exports.QUALITY_HIGH = '.quality-high';
+
+    /**
+     * 超清画质选择器
+     *
+     * @type {string}
+     */
+    exports.QUALITY_SUPER = '.quality-super';
 
 });

@@ -81,11 +81,28 @@
         margin: 0 10px;
     }
 
+    .quality-control,
     .mute-control,
     .volume-bar,
     .fullscreen-control {
         float: right;
         margin: 0 10px;
+    }
+
+    .quality-control {
+        position: relative;
+        ul {
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+
+            list-style: none;
+            line-height: 1.5;
+            width: 3em;
+            margin: 0;
+            padding: 0;
+        }
     }
 
     .volume-bar {
