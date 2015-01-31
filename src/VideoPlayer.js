@@ -495,6 +495,10 @@ define(function (require, exports) {
             me.video.prop('muted', muted);
             me.shared.muted = muted;
 
+            me.updateVolume(
+                muted ? 0 : me.getVolume()
+            );
+
         },
 
         /**
@@ -562,11 +566,10 @@ define(function (require, exports) {
             );
 
             var duration = me.getDuration();
-            var percent = lib.percent(time, duration);
 
             var playProgress = element.find(selector.PLAY_PROGRESS);
             playProgress.width(
-                percent
+                lib.percent(time, duration)
             );
 
             var progressBar = element.find(selector.PROGRESS_BAR);
