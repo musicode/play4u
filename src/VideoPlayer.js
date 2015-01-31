@@ -25,17 +25,20 @@ define(function (require, exports) {
     var Popup = require('cobble/helper/Popup');
     var Draggable = require('cobble/helper/Draggable');
     var fullScreen = require('cobble/util/fullScreen');
-    var eventOffset = require('cobble/function/eventOffset');
 
     /**
      * @param {Object} options
      * @property {jQuery} options.element
      * @property {string} options.src
-     * @property {string} options.poster
-     * @property {boolean} options.autoplay
-     * @property {boolean} options.loop 是否循环播放
-     * @property {number} options.width
-     * @property {number} options.height
+     * @property {string=} options.poster
+     * @property {boolean=} options.autoplay
+     * @property {boolean=} options.loop 是否循环播放
+     * @property {number|string} options.width
+     * @property {number|string} options.height
+     * @property {Object=} options.quality 画质
+     * @property {string=} options.quality.low 标清画质
+     * @property {string=} options.quality.high 高清画质
+     * @property {string=} options.quality.super 超清画质
      *
      * @property {(string|Array.<string>)=} options.titles 片头视频地址
      * @property {(string|Array.<string>)=} options.credits 片尾视频地址
@@ -192,37 +195,39 @@ define(function (require, exports) {
 
             };
 
+            var clickType = 'click';
+
             element
-            .on('click', '.' + selector.CLASS_PLAY, function () {
+            .on(clickType, '.' + selector.CLASS_PLAY, function () {
                 me.play();
             })
-            .on('click', '.' + selector.CLASS_PAUSE, function () {
+            .on(clickType, '.' + selector.CLASS_PAUSE, function () {
                 me.pause();
             })
-            .on('click', '.' + selector.CLASS_MUTED, function () {
+            .on(clickType, '.' + selector.CLASS_MUTED, function () {
                 me.setMute(false);
             })
-            .on('click', '.' + selector.CLASS_UNMUTED, function () {
+            .on(clickType, '.' + selector.CLASS_UNMUTED, function () {
                 me.setMute(true);
             })
-            .on('click', selector.FULLSCREEN, function () {
+            .on(clickType, selector.FULLSCREEN, function () {
                 fullScreen.enter();
             })
-            .on('click', selector.PROGRESS_BAR, function (e) {
+            .on(clickType, selector.PROGRESS_BAR, function (e) {
                 var x = e.pageX - progressBar.offset().left;
                 pos2Time(x);
             })
-            .on('click', selector.VOLUME_BAR, function (e) {
+            .on(clickType, selector.VOLUME_BAR, function (e) {
                 var x = e.pageX - volumeBar.offset().left;
                 pos2Volume(x);
             })
-            .on('click', selector.QUALITY_LOW, function () {
+            .on(clickType, selector.QUALITY_LOW, function () {
                 me.mainVideo.prop('src', quality.low);
             })
-            .on('click', selector.QUALITY_HIGH, function () {
+            .on(clickType, selector.QUALITY_HIGH, function () {
                 me.mainVideo.prop('src', quality.high);
             })
-            .on('click', selector.QUALITY_SUPER, function () {
+            .on(clickType, selector.QUALITY_SUPER, function () {
                 me.mainVideo.prop('src', quality.super);
             });
 
@@ -231,10 +236,10 @@ define(function (require, exports) {
                     element: element.find(selector.QUALITY),
                     layer: element.find(selector.QUALITY_LAYER),
                     show: {
-                        trigger: 'click'
+                        trigger: clickType
                     },
                     hide: {
-                        trigger: 'click'
+                        trigger: clickType
                     }
                 });
             }
@@ -428,18 +433,18 @@ define(function (require, exports) {
         /**
          * 设置音量
          *
-         * @param {number} value 音量值，从 0 到 1，0 表示静音
+         * @param {number} volume 音量值，从 0 到 1，0 表示静音
          */
-        setVolume: function (value) {
+        setVolume: function (volume) {
 
             var me = this;
 
-            if (value >= 0 && value <= 1) {
+            if (volume >= 0 && volume <= 1) {
 
-                me.video.prop('volume', value);
-                me.shared.volume = value;
+                me.video.prop('volume', volume);
+                me.shared.volume = volume;
 
-                me.updateVolume(value);
+                me.updateVolume(volume);
 
             }
         },
