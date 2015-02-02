@@ -1,0 +1,29 @@
+.video-player {
+
+    .button-control {
+        border-right: 1px solid rgba(0,0,0,0.5);
+        cursor: pointer;
+        display: inline-block;
+        padding: 12px 16px;
+        vertical-align: top;
+        box-shadow: 1px 0 0 rgba(76,76,76,0.5);
+
+        &:hover {
+            .play-icon {
+                background-position: 0 -21px;
+            }
+            .pause-icon {
+                background-position: -18px -21px;
+            }
+        }
+    }
+
+    .play-icon {
+        background-position: 0 0;
+    }
+
+    .pause-icon {
+        background-position: -18px 0;
+    }
+
+}

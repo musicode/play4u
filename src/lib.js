@@ -132,6 +132,22 @@ define(function (require, exports) {
     };
 
     /**
+     * 切换 class
+     *
+     * @param {jQuery} element
+     * @param {string} added
+     * @param {string} removed
+     */
+    exports.toggleClass = function (element, added, removed) {
+
+        element
+            .find('.' + removed)
+            .addClass(added)
+            .removeClass(removed);
+
+    };
+
+    /**
      * 小时的秒数
      *
      * @type {number}

@@ -11,28 +11,78 @@ define(function (require, exports) {
      *
      * @type {string}
      */
-    exports.CLASS_PLAY = 'fa-play';
+    exports.CLASS_PLAY = 'play-icon';
 
     /**
      * 暂停按钮  class
      *
      * @type {string}
      */
-    exports.CLASS_PAUSE = 'fa-pause';
+    exports.CLASS_PAUSE = 'pause-icon';
 
     /**
      * 非静音状态 class
      *
      * @type {string}
      */
-    exports.CLASS_UNMUTED = 'fa-volume-up';
+    exports.CLASS_UNMUTED = 'volume-up-icon';
 
     /**
      * 静音状态 class
      *
      * @type {string}
      */
-    exports.CLASS_MUTED = 'fa-volume-off';
+    exports.CLASS_MUTED = 'volume-off-icon';
+
+    /**
+     * 画质面板中的当前选中画质 class
+     *
+     * @type {string}
+     */
+    exports.CLASS_QUALITY_ACTIVE = 'active';
+
+    /**
+     * 进入全屏 class
+     *
+     * @type {string}
+     */
+    exports.CLASS_EXPAND = 'expand-icon';
+
+    /**
+     * 退出全屏 class
+     *
+     * @type {string}
+     */
+    exports.CLASS_COMPRESS = 'compress-icon';
+
+    /**
+     * 全屏状态给容器添加的 class
+     *
+     * @type {string}
+     */
+    exports.CLASS_FULLSCREEN = 'fullscreen';
+
+
+    /**
+     * 控件条选择器
+     *
+     * @type {string}
+     */
+    exports.CONTROL_BAR = '.control-bar';
+
+    /**
+     * 静音选择器
+     *
+     * @type {string}
+     */
+    exports.MUTE = '.mute-control';
+
+    /**
+     * 音量面板选择器
+     *
+     * @type {string}
+     */
+    exports.VOLUME_PANEL = '.volume-panel';
 
     /**
      * 显示当前时间选择器
@@ -84,6 +134,13 @@ define(function (require, exports) {
     exports.VOLUME_BAR = '.volume-bar';
 
     /**
+     * 音量进度条选择器
+     *
+     * @type {string}
+     */
+    exports.VOLUME_PROGRESS = '.volume-progress';
+
+    /**
      * 音量手柄选择器
      *
      * @type {string}
@@ -98,11 +155,11 @@ define(function (require, exports) {
     exports.LOADING = '.load-spinner';
 
     /**
-     * 加载动画选择器
+     * 显示画质选择器
      *
      * @type {string}
      */
-    exports.FULLSCREEN = '.fullscreen-control';
+    exports.CURRENT_QUALITY = '.current-quality';
 
     /**
      * 画质图标选择器
@@ -112,11 +169,11 @@ define(function (require, exports) {
     exports.QUALITY = '.quality-control';
 
     /**
-     * 画质浮层选择器
+     * 画质面板选择器
      *
      * @type {string}
      */
-    exports.QUALITY_LAYER = '.quality-control ul';
+    exports.QUALITY_PANEL = '.quality-control ul';
 
     /**
      * 标清画质选择器

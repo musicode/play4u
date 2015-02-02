@@ -1,0 +1,64 @@
+
+@import "layout.styl";
+@import "./style/controlBar.styl";
+@import "./style/progressBar.styl";
+@import "./style/buttonControl.styl";
+@import "./style/timeControl.styl";
+@import "./style/titleControl.styl";
+@import "./style/qualityControl.styl";
+@import "./style/muteControl.styl";
+@import "./style/volumeBar.styl";
+@import "./style/fullscreenControl.styl";
+@import "./style/logoControl.styl";
+@import "./style/loadSpinner.styl";
+
+$control-bar-height = 54px;
+
+.video-player {
+
+    position: relative;
+    font-size: 13px;
+
+    width: 650px;
+    height: 416px;
+    padding-bottom: $control-bar-height;
+
+    display: flex;
+    align-items: center;
+
+    video {
+        width: 100%;
+    }
+
+    .control-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .quality-control,
+    .mute-control,
+    .fullscreen-control,
+    .logo-control {
+        float: right;
+    }
+
+    .load-icon {
+        background: url(load.gif) no-repeat;
+        display: block;
+        width: 100px;
+        height: 100px;
+    }
+
+    &.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        width: auto;
+        height: auto;
+    }
+
+}

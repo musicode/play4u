@@ -11,16 +11,19 @@ define(function (require, exports) {
      *
      * 1.自定义控件，如播放、暂停按钮、进度条、音量条
      * 2.自定义右键菜单（待实现）
-     * 3.多终端自适应
-     * 4.需支持平台支持的视频格式，不做 fallback 处理
+     * 3.需支持平台支持的视频格式，不做 fallback 处理
      *
      * 组件采用 AMD 形式加载，不存在 domready 之后再执行的需求，
      * 如果非要强求顺序，可在业务代码中控制
+     *
+     * 高宽最好通过样式控制，脚本操作终究少了一些灵活性，
+     * 加上 css3 的全面支持，几乎可实现任何效果
      */
 
     var lib = require('./lib');
     var selector = require('./selector');
     var VideoEvent = require('./VideoEvent');
+    var toggleClass = lib.toggleClass;
 
     var Popup = require('cobble/helper/Popup');
     var Draggable = require('cobble/helper/Draggable');
@@ -36,12 +39,19 @@ define(function (require, exports) {
      * @property {string=} options.poster 封面图片
      * @property {boolean=} options.autoplay 是否自动播放
      * @property {boolean=} options.loop 是否循环播放
-     * @property {number|string} options.width 视频宽度
-     * @property {number|string} options.height 视频高度
      * @property {Object=} options.quality 画质
-     * @property {string=} options.quality.low 标清画质
-     * @property {string=} options.quality.high 高清画质
-     * @property {string=} options.quality.super 超清画质
+     *
+     * @property {Object=} options.quality.low 标清画质
+     * @property {Object=} options.quality.low.text 标清画质文本，如“标清”
+     * @property {Object=} options.quality.low.url 标清画质 url
+     *
+     * @property {Object=} options.quality.high 高清画质
+     * @property {Object=} options.quality.high.text 高清画质文本，如“高清”
+     * @property {Object=} options.quality.high.url 高清画质 url
+     *
+     * @property {Object=} options.quality.super 超清画质
+     * @property {Object=} options.quality.super.text 超清画质文本，如“超清”
+     * @property {Object=} options.quality.super.url 超清画质 url
      *
      * @property {(string|Array.<string>)=} options.titles 片头视频地址
      * @property {(string|Array.<string>)=} options.credits 片尾视频地址
@@ -121,16 +131,11 @@ define(function (require, exports) {
             /**
              * 片头、片尾、正片的共享属性
              *
-             * 包括 controls width height volume muted
+             * 包括 controls volume muted
              *
              * @type {Object}
              */
-            me.shared = $.extend(
-                            {
-                                controls: false
-                            },
-                            lib.fetch(me, [ 'width', 'height' ])
-                        );
+            me.shared = { controls: false };
 
         },
 
@@ -151,12 +156,6 @@ define(function (require, exports) {
             var me = this;
             var element = me.element;
 
-            var shared = me.shared;
-            element.css({
-                width: shared.width,
-                height: shared.height
-            });
-
             var quality = me.quality;
 
             var progressBar = element.find(selector.PROGRESS_BAR);
@@ -164,6 +163,13 @@ define(function (require, exports) {
 
             var volumeBar = element.find(selector.VOLUME_BAR);
             var volumeHandle = element.find(selector.VOLUME_HANDLE);
+
+            var currentQuality = element.find(selector.CURRENT_QUALITY);
+
+            var expandClass = selector.CLASS_EXPAND;
+            var compressClass = selector.CLASS_COMPRESS;
+            var fullScreenClass = selector.CLASS_FULLSCREEN;
+            var activeQualityClass = selector.CLASS_QUALITY_ACTIVE;
 
             var pos2Time = function (pos) {
 
@@ -183,18 +189,38 @@ define(function (require, exports) {
 
             var pos2Volume = function (pos) {
 
-                var volumeBarWidth = volumeBar.innerWidth();
-                var volumeHandleWidth = volumeHandle.outerWidth(true);
+                var volumeBarHeight = volumeBar.innerHeight();
+                var volumeHandleHeight = volumeHandle.outerHeight(true);
 
-                var max = volumeBarWidth - volumeHandleWidth;
+                var max = volumeBarHeight - volumeHandleHeight;
 
                 if (pos > max) {
                     pos = max;
                 }
 
+                pos = max - pos;
+
                 me.setVolume(
                     pos / max
                 );
+
+            };
+
+            var changeQuality = function (type, target) {
+
+                var data = quality[type];
+
+                me.mainVideo.prop('src', data.url);
+                currentQuality.text(data.text);
+
+
+                qualityPanel
+                    .find('.' + activeQualityClass)
+                    .removeClass(activeQualityClass);
+
+                $(target).addClass(activeQualityClass);
+
+                qualityPopup.close();
 
             };
 
@@ -207,37 +233,63 @@ define(function (require, exports) {
             .on(clickType, '.' + selector.CLASS_PAUSE, function () {
                 me.pause();
             })
+/**
             .on(clickType, '.' + selector.CLASS_MUTED, function () {
                 me.setMute(false);
             })
             .on(clickType, '.' + selector.CLASS_UNMUTED, function () {
                 me.setMute(true);
             })
-            .on(clickType, selector.FULLSCREEN, function () {
+*/
+            .on(clickType, '.' + expandClass, function () {
                 fullScreen.enter();
+            })
+            .on(clickType, '.' + compressClass, function () {
+                fullScreen.exit();
             })
             .on(clickType, selector.PROGRESS_BAR, function (e) {
                 var x = e.pageX - progressBar.offset().left;
                 pos2Time(x);
             })
             .on(clickType, selector.VOLUME_BAR, function (e) {
-                var x = e.pageX - volumeBar.offset().left;
-                pos2Volume(x);
+                var y = e.pageY - volumeBar.offset().top;
+                pos2Volume(y);
             })
             .on(clickType, selector.QUALITY_LOW, function () {
-                me.mainVideo.prop('src', quality.low);
+                changeQuality('low', this);
             })
             .on(clickType, selector.QUALITY_HIGH, function () {
-                me.mainVideo.prop('src', quality.high);
+                changeQuality('high', this);
             })
             .on(clickType, selector.QUALITY_SUPER, function () {
-                me.mainVideo.prop('src', quality.super);
+                changeQuality('super', this);
+            });
+
+            fullScreen.change(function (isFullScreen) {
+
+                if (isFullScreen) {
+
+                    toggleClass(element, compressClass, expandClass);
+                    element.addClass(fullScreenClass);
+
+                }
+                else {
+
+                    toggleClass(element, expandClass, compressClass);
+                    element.removeClass(fullScreenClass);
+
+                }
+
+
             });
 
             if (quality) {
-                new Popup({
+
+                var qualityPanel = element.find(selector.QUALITY_PANEL);
+
+                var qualityPopup = new Popup({
                     element: element.find(selector.QUALITY),
-                    layer: element.find(selector.QUALITY_LAYER),
+                    layer: qualityPanel,
                     show: {
                         trigger: clickType
                     },
@@ -246,6 +298,17 @@ define(function (require, exports) {
                     }
                 });
             }
+
+            new Popup({
+                element: element.find(selector.MUTE),
+                layer: element.find(selector.VOLUME_PANEL),
+                show: {
+                    trigger: clickType
+                },
+                hide: {
+                    trigger: clickType
+                }
+            });
 
             new Draggable({
                 element: seekHandle,
@@ -260,10 +323,10 @@ define(function (require, exports) {
             new Draggable({
                 element: volumeHandle,
                 container: volumeBar,
-                axis: 'x',
+                axis: 'y',
                 silence: true,
                 onDrag: function (e, data) {
-                    pos2Volume(data.left);
+                    pos2Volume(data.top);
                 }
             });
 
@@ -311,10 +374,6 @@ define(function (require, exports) {
 
                 duration = mainVideo.prop('duration');
                 me.setDuration(duration);
-
-                me.updateVolume(
-                    me.getVolume()
-                );
 
             })
             .on(VideoEvent.LOAD_PROGRESS, function () {
@@ -462,23 +521,29 @@ define(function (require, exports) {
             var element = this.element;
 
             var volumeBar = element.find(selector.VOLUME_BAR);
+            var volumeProgress = volumeBar.find(selector.VOLUME_PROGRESS);
             var volumeHandle = element.find(selector.VOLUME_HANDLE);
 
-            var volumeBarWidth = volumeBar.innerWidth();
-            var volumeHandleWidth = volumeHandle.outerWidth(true);
+            var volumeBarHeight = volumeBar.innerHeight();
+            var volumeHandleHeight = volumeHandle.outerHeight(true);
 
-            var left = volume * volumeBarWidth;
+            var bottom = volume * volumeBarHeight;
 
-            left -= volumeHandleWidth;
+            volumeProgress.height(bottom);
 
-            if (left < 0) {
-                left = 0;
+            bottom -= volumeHandleHeight;
+
+            if (bottom < 0) {
+                bottom = 0;
             }
-            else if (left + volumeHandleWidth > volumeBarWidth) {
-                left = volumeBarWidth - volumeHandleWidth;
+            else if (bottom + volumeHandleHeight > volumeBarHeight) {
+                bottom = volumeBarHeight - volumeHandleHeight;
             }
 
-            volumeHandle.css('left', left);
+            volumeHandle.css({
+                top: 'auto',
+                bottom: bottom
+            });
 
         },
 
@@ -667,18 +732,18 @@ define(function (require, exports) {
             console.log('error type：' + e.type);
         };
 
+        var playClass = selector.CLASS_PLAY;
+        var pauseClass = selector.CLASS_PAUSE;
+
+        var mutedClass = selector.CLASS_MUTED;
+        var unmutedClass = selector.CLASS_UNMUTED;
+
         video
         .on(VideoEvent.PLAY + VIDEO_EVENT, function () {
-            element
-                .find('.' + selector.CLASS_PLAY)
-                .removeClass(selector.CLASS_PLAY)
-                .addClass(selector.CLASS_PAUSE);
+            toggleClass(element, pauseClass, playClass);
         })
         .on(VideoEvent.PAUSE + VIDEO_EVENT, function () {
-            element
-                .find('.' + selector.CLASS_PAUSE)
-                .removeClass(selector.CLASS_PAUSE)
-                .addClass(selector.CLASS_PLAY);
+            toggleClass(element, playClass, pauseClass);
         })
         .on(VideoEvent.PLAY_WAITING + VIDEO_EVENT, function () {
             element.find(selector.LOADING).show();
@@ -688,21 +753,11 @@ define(function (require, exports) {
         })
         .on(VideoEvent.VOLUME_CHANGE + VIDEO_EVENT, function () {
 
-            var mutedClass = selector.CLASS_MUTED;
-            var unmutedClass = selector.CLASS_UNMUTED;
-
             if (player.isMuted() || player.getVolume() === 0) {
-                element
-                    .find('.' + unmutedClass)
-                    .addClass(mutedClass)
-                    .removeClass(unmutedClass);
-
+                toggleClass(element, mutedClass, unmutedClass);
             }
             else {
-                element
-                    .find('.' + mutedClass)
-                    .addClass(unmutedClass)
-                    .removeClass(mutedClass);
+                toggleClass(element, unmutedClass, mutedClass);
             }
 
         })
@@ -718,7 +773,9 @@ define(function (require, exports) {
             player.index = index;
 
         })
-        .on(VideoEvent.LOAD_ABORT + VIDEO_EVENT, errorHandler)
+        .on(VideoEvent.LOAD_ABORT + VIDEO_EVENT, function () {
+            player.play();
+        })
         .on(VideoEvent.LOAD_ERROR + VIDEO_EVENT, errorHandler)
         .on(VideoEvent.LOAD_STALLED + VIDEO_EVENT, errorHandler);
 
