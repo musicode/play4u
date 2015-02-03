@@ -120,6 +120,13 @@ define(function (require, exports) {
     exports.PROGRESS_BAR = '.progress-bar';
 
     /**
+     * 进度条面板选择器
+     *
+     * @type {string}
+     */
+    exports.PROGRESS_PANEL = '.progress-panel';
+
+    /**
      * 进度拖拽手柄选择器
      *
      * @type {string}

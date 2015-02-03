@@ -7,22 +7,38 @@ define(function (require, exports) {
     'use strict';
 
     /**
-     * 具有以下功能：
+     * # 功能
      *
      * 1.自定义控件，如播放、暂停按钮、进度条、音量条
      * 2.自定义右键菜单（待实现）
      * 3.需支持平台支持的视频格式，不做 fallback 处理
      *
+     * # 加载
+     *
      * 组件采用 AMD 形式加载，不存在 domready 之后再执行的需求，
      * 如果非要强求顺序，可在业务代码中控制
      *
+     * # 宽高
+     *
      * 高宽最好通过样式控制，脚本操作终究少了一些灵活性，
      * 加上 css3 的全面支持，几乎可实现任何效果
+     *
+     * # 性能
+     *
+     * 在有片头片尾的情况下，为了提升性能，需要预加载
+     *
+     * 因为必须在初始化截断获取正片的总时长（为了显示），所以正片必须占用一个 video
+     *
+     * # 片头
+     *
+     * poster 属性有一些兼容问题，所以最好模拟实现
+     *
      */
 
     var lib = require('./lib');
     var selector = require('./selector');
     var VideoEvent = require('./VideoEvent');
+    var supportEvent = require('./touchClick');
     var toggleClass = lib.toggleClass;
 
     var Popup = require('cobble/helper/Popup');
@@ -75,40 +91,46 @@ define(function (require, exports) {
             me.initShared();
             me.initPlayer();
 
-            me.initMain();
-
-            var mainVideo = me.mainVideo;
-
             var titles = lib.toArray(me.titles);
             var credits = lib.toArray(me.credits);
+
+            var url = me.src;
+
+            if (titles.length > 0) {
+                lib.createVideo(url);
+            }
+
+            /**
+             * 播放的视频元素
+             *
+             * @type {jQuery}
+             */
+            me.video = me.element.find('video');
 
             /**
              * 当前播放列表
              *
              * @type {Array}
              */
-            var list =
-            me.list = titles.concat([ mainVideo ], credits);
+            me.list = titles.concat([ url ], credits);
 
-            if (titles.length > 0) {
+            /**
+             * 正片的索引
+             *
+             * @type {number}
+             */
+            me.mainIndex = titles.length;
 
-                var video = me.createVideo(list[0]);
-                var props = { };
+            /**
+             * 正片的属性
+             *
+             * @type {Object}
+             */
+            me.mainProperty = lib.fetch(
+                                me,
+                                [ 'src', 'poster', 'autoplay', 'loop' ]
+                            );
 
-                if (me.autoplay) {
-                    props.autoplay = true;
-                    mainVideo.prop('autoplay', false);
-                }
-                if (me.poster) {
-                    props.poster = me.poster;
-                }
-
-                video.prop(props);
-
-                mainVideo.hide();
-
-                list[0] = video;
-            }
 
             me.setActiveVideo(0);
 
@@ -128,7 +150,7 @@ define(function (require, exports) {
              *
              * @type {Object}
              */
-            me.shared = { controls: false };
+            me.sharedProperty = { controls: false };
 
         },
 
@@ -138,18 +160,7 @@ define(function (require, exports) {
          * @param {jQuery} video
          */
         applyShared: function (video) {
-            video.prop(this.shared);
-        },
-
-        createVideo: function (url) {
-
-            var me = this;
-
-            var video = lib.createVideo(url, me.shared);
-
-            me.mainVideo.after(video);
-
-            return video;
+            video.prop(this.sharedProperty);
         },
 
         /**
@@ -214,9 +225,8 @@ define(function (require, exports) {
 
                 var data = quality[type];
 
-                me.mainVideo.prop('src', data.url);
+                me.setProperty('src', data.url);
                 currentQuality.text(data.text);
-
 
                 qualityPanel
                     .find('.' + activeQualityClass)
@@ -228,62 +238,66 @@ define(function (require, exports) {
 
             };
 
-            var clickType = 'click';
+            var eventType = supportEvent.type;
 
             element
-            .on(clickType, '.' + selector.CLASS_PLAY, function () {
+            .on(eventType, 'video', function () {
+                if (me.isPaused()) {
+                    me.play();
+                }
+                else {
+                    me.pause();
+                }
+            })
+            .on(eventType, '.' + selector.CLASS_PLAY, function () {
                 me.play();
             })
-            .on(clickType, '.' + selector.CLASS_PAUSE, function () {
+            .on(eventType, '.' + selector.CLASS_PAUSE, function () {
                 me.pause();
             })
 /**
-            .on(clickType, '.' + selector.CLASS_MUTED, function () {
+            .on(eventType, '.' + selector.CLASS_MUTED, function () {
                 me.setMute(false);
             })
-            .on(clickType, '.' + selector.CLASS_UNMUTED, function () {
+            .on(eventType, '.' + selector.CLASS_UNMUTED, function () {
                 me.setMute(true);
             })
 */
-            .on(clickType, '.' + expandClass, function () {
+            .on(eventType, '.' + expandClass, function () {
                 fullScreen.enter();
             })
-            .on(clickType, '.' + compressClass, function () {
+            .on(eventType, '.' + compressClass, function () {
                 fullScreen.exit();
             })
-            .on(clickType, selector.PROGRESS_BAR, function (e) {
-                var x = e.pageX - progressBar.offset().left;
+            .on(eventType, selector.PROGRESS_PANEL, function (e) {
+                var progressPanel = element.find(selector.PROGRESS_PANEL);
+                var x = supportEvent.pageX(e) - progressPanel.offset().left;
                 pos2Time(x);
             })
-            .on(clickType, selector.VOLUME_BAR, function (e) {
-                var y = e.pageY - volumeBar.offset().top;
+            .on(eventType, selector.VOLUME_BAR, function (e) {
+                var y = supportEvent.pageY(e) - volumeBar.offset().top;
                 pos2Volume(y);
             })
-            .on(clickType, selector.QUALITY_LOW, function () {
+            .on(eventType, selector.QUALITY_LOW, function () {
                 changeQuality('low', this);
             })
-            .on(clickType, selector.QUALITY_HIGH, function () {
+            .on(eventType, selector.QUALITY_HIGH, function () {
                 changeQuality('high', this);
             })
-            .on(clickType, selector.QUALITY_SUPER, function () {
+            .on(eventType, selector.QUALITY_SUPER, function () {
                 changeQuality('super', this);
             });
 
             fullScreen.change(function (isFullScreen) {
 
                 if (isFullScreen) {
-
                     toggleClass(element, compressClass, expandClass);
                     element.addClass(fullScreenClass);
-
                 }
                 else {
-
                     toggleClass(element, expandClass, compressClass);
                     element.removeClass(fullScreenClass);
-
                 }
-
 
             });
 
@@ -337,104 +351,37 @@ define(function (require, exports) {
         },
 
         /**
-         * 初始化正片
-         */
-        initMain: function () {
-
-            var me = this;
-            var element = me.element;
-            var mainVideo = element.find('video');
-
-            mainVideo.prop(
-                $.extend(
-                    lib.fetch(me, [ 'src', 'poster', 'autoplay', 'loop' ]),
-                    me.shared
-                )
-            );
-
-            var duration;
-
-            mainVideo
-            .one(VideoEvent.LOAD_META_COMPLETE, function () {
-
-                duration = mainVideo.prop('duration');
-                me.setDuration(duration);
-
-            })
-            .on(VideoEvent.LOAD_PROGRESS, function () {
-
-                var size = lib.loaded(this);
-
-                element
-                    .find(selector.LOAD_PROGRESS)
-                    .width(
-                        lib.percent(size, duration)
-                    );
-
-            })
-            .on(VideoEvent.PLAY_PROGRESS, function () {
-                me.updateCurrentTime(
-                    me.getCurrentTime()
-                );
-            });
-
-            me.mainVideo = mainVideo;
-
-        },
-
-        /**
          * 设置当前激活的视频
          *
-         * @param {number|jQuery} index
+         * @param {number} index
          */
         setActiveVideo: function (index) {
 
             var me = this;
 
-            var prev = me.video;
-            if (prev) {
-                prev.hide();
-                prev.off(VIDEO_EVENT);
+            var video = me.video;
+
+            video.off(videoNamespace);
+
+            var mainProperty = me.mainProperty;
+            var property = $.extend({ }, me.sharedProperty);
+
+            if (index === me.mainIndex) {
+                $.extend(property, mainProperty);
             }
-
-            var list = me.list;
-
-            if (index.jquery) {
-                $.each(
-                    list,
-                    function (i, video) {
-                        if (video === index) {
-                            index = i;
-                            return false;
-                        }
-                    }
-                );
-            }
-
-            if ($.type(index) !== 'number') {
-                throw new Error('setActiveVideo 参数错误');
-            }
-
-            var index2Element = function (index) {
-                var video = list[index];
-                if (video && $.type(video) === 'string') {
-                    video = list[index] = me.createVideo(video);
+            else {
+                property.src = me.list[index];
+                if (index === 0) {
+                    property.poster = mainProperty.poster;
                 }
-                return video;
-            };
+            }
 
-            var video = index2Element(index);
-
-            // 预加载
-            index2Element(index + 1);
-
-            me.applyShared(video);
-
-            video.show();
+            video.prop(
+                property
+            );
 
             listen(me, video);
 
-            me.video = video;
             me.index = index;
 
         },
@@ -447,12 +394,10 @@ define(function (require, exports) {
             var me = this;
 
             if (me.index === me.list.length) {
-                me.setActiveVideo(me.mainVideo);
+                me.setActiveVideo(me.mainIndex);
             }
 
-            var video = me.video[0];
-
-            video.play();
+            me.video[0].play();
         },
 
         /**
@@ -463,12 +408,39 @@ define(function (require, exports) {
         },
 
         /**
+         * 是否暂停播放
+         *
+         * @return {boolean}
+         */
+        isPaused: function () {
+            return this.video.prop('paused');
+        },
+
+        /**
+         * 更新加载进度条
+         *
+         * @param {number} time 已加载的时间
+         */
+        updateLoadProgress: function (time) {
+
+            var me = this;
+            var loadProgress = me.element.find(selector.LOAD_PROGRESS);
+
+            loadProgress.width(
+                lib.percent(
+                    time,
+                    me.getDuration()
+                )
+            );
+        },
+
+        /**
          * 获取音量
          *
          * @return {number}
          */
         getVolume: function () {
-            return this.video.prop('volume');
+            return this.getProperty('volume');
         },
 
         /**
@@ -482,8 +454,7 @@ define(function (require, exports) {
 
             if (volume >= 0 && volume <= 1) {
 
-                me.video.prop('volume', volume);
-                me.shared.volume = volume;
+                me.setProperty('volume', volume);
 
                 me.updateVolume(volume);
 
@@ -532,7 +503,7 @@ define(function (require, exports) {
          * @return {boolean}
          */
         isMuted: function () {
-            return this.video.prop('muted');
+            return this.getProperty('muted');
         },
 
         /**
@@ -544,8 +515,7 @@ define(function (require, exports) {
 
             var me = this;
 
-            me.video.prop('muted', muted);
-            me.shared.muted = muted;
+            me.setProperty('muted', muted);
 
             me.updateVolume(
                 muted ? 0 : me.getVolume()
@@ -559,17 +529,15 @@ define(function (require, exports) {
          * @return {number}
          */
         getDuration: function () {
-            return this.mainVideo.prop('duration');
+            return this.getProperty('duration');
         },
 
         /**
-         * 设置总时长
-         *
-         * duration 无法被修改，此函数只是修改 DOM 展现
+         * 更新总时长的 DOM
          *
          * @param {number} time 总时长，单位为秒
          */
-        setDuration: function (time) {
+        updateDuration: function (time) {
 
             var me = this;
 
@@ -586,7 +554,7 @@ define(function (require, exports) {
          * @return {number}  播放位置，单位为秒
          */
         getCurrentTime: function () {
-            return this.mainVideo.prop('currentTime');
+            return this.getProperty('currentTime');
         },
 
         /**
@@ -598,7 +566,7 @@ define(function (require, exports) {
 
             var me = this;
 
-            me.mainVideo.prop('currentTime', time);
+            me.setProperty('currentTime', time);
             me.updateCurrentTime(time);
         },
 
@@ -641,6 +609,42 @@ define(function (require, exports) {
             }
 
             seekHandle.css('left', left);
+
+        },
+
+        /**
+         * 获取正片的属性
+         *
+         * @return {*}
+         */
+        getProperty: function (name) {
+            var me = this;
+            var value = me.mainProperty[ name ];
+            if (value == null) {
+                value = me.video.prop(name);
+            }
+            return value;
+        },
+
+        /**
+         * 设置正片的属性
+         *
+         * @param {string} name
+         * @param {*} value
+         */
+        setProperty: function (name, value) {
+
+            var me = this;
+
+            var isShared = sharedProperties.indexOf(name) > -1;
+
+            var target = isShared ? 'sharedProperty' : 'mainProperty';
+
+            me[ target ][ name ] = value;
+
+            if (isShared || me.index === me.mainIndex) {
+                me.video.prop(name, value);
+            }
 
         },
 
@@ -689,27 +693,25 @@ define(function (require, exports) {
     };
 
     /**
-     * 视频事件，用于定义命名空间
+     * 可共享的元素
+     *
+     * @inner
+     * @type {Array.<string>}
+     */
+    var sharedProperties = [ 'muted', 'volume' ];
+
+    /**
+     * 视频事件命名空间
      *
      * @inner
      * @type {string}
      */
-    var VIDEO_EVENT = '.videoplayer';
+    var videoNamespace = '.video_player';
 
-    /**
-     * 提供一个工具函数，用于统一处理视频事件
-     *
-     * @inner
-     * @param {VideoPlayer} player 播放器实例
-     * @param {jQuery} video 视频元素
-     */
+
     function listen(player, video) {
 
         var element = player.element;
-
-        var errorHandler = function (e) {
-            console.log('error type：' + e.type, e.target);
-        };
 
         var playClass = selector.CLASS_PLAY;
         var pauseClass = selector.CLASS_PAUSE;
@@ -717,20 +719,74 @@ define(function (require, exports) {
         var mutedClass = selector.CLASS_MUTED;
         var unmutedClass = selector.CLASS_UNMUTED;
 
+        var dispatch = function (e) {
+            e.player = player;
+            element.trigger(e);
+        };
+
         video
-        .on(VideoEvent.PLAY + VIDEO_EVENT, function () {
+        .on(VideoEvent.LOAD_START + videoNamespace, function (e) {
+            dispatch(e);
+        })
+        .on(VideoEvent.LOAD_META_COMPLETE + videoNamespace, function (e) {
+
+            dispatch(e);
+
+            if (!e.isDefaultPrevented()) {
+                var duration = this.duration;
+
+                player.setProperty(
+                    'duration',
+                    duration
+                );
+
+                player.updateDuration(
+                    duration
+                );
+            }
+        })
+        .on(VideoEvent.LOAD_PROGRESS + videoNamespace, function (e) {
+
+            dispatch(e);
+
+            if (!e.isDefaultPrevented()) {
+                player.updateLoadProgress(
+                    lib.loaded(this)
+                );
+            }
+        })
+        .on(VideoEvent.PLAY_PROGRESS + videoNamespace, function (e) {
+
+            dispatch(e);
+
+            if (!e.isDefaultPrevented()) {
+                player.updateCurrentTime(
+                    this.currentTime
+                );
+            }
+        })
+        .on(VideoEvent.CAN_PLAY_THROUGH + videoNamespace, function (e) {
+            dispatch(e);
+        })
+        .on(VideoEvent.PLAY + videoNamespace, function (e) {
+            dispatch(e);
             toggleClass(element, pauseClass, playClass);
         })
-        .on(VideoEvent.PAUSE + VIDEO_EVENT, function () {
+        .on(VideoEvent.PAUSE + videoNamespace, function (e) {
+            dispatch(e);
             toggleClass(element, playClass, pauseClass);
         })
-        .on(VideoEvent.PLAY_WAITING + VIDEO_EVENT, function () {
+        .on(VideoEvent.PLAY_WAITING + videoNamespace, function (e) {
+            dispatch(e);
             element.find(selector.LOADING).show();
         })
-        .on(VideoEvent.CAN_PLAY + VIDEO_EVENT, function () {
+        .on(VideoEvent.CAN_PLAY + videoNamespace, function (e) {
+            dispatch(e);
             element.find(selector.LOADING).hide();
         })
-        .on(VideoEvent.VOLUME_CHANGE + VIDEO_EVENT, function () {
+        .on(VideoEvent.VOLUME_CHANGE + videoNamespace, function (e) {
+
+            dispatch(e);
 
             if (player.isMuted() || player.getVolume() === 0) {
                 toggleClass(element, mutedClass, unmutedClass);
@@ -740,7 +796,9 @@ define(function (require, exports) {
             }
 
         })
-        .on(VideoEvent.PLAY_COMPLETE + VIDEO_EVENT, function () {
+        .on(VideoEvent.PLAY_COMPLETE + videoNamespace, function (e) {
+
+            dispatch(e);
 
             var index = player.index + 1;
 
@@ -752,16 +810,14 @@ define(function (require, exports) {
             player.index = index;
 
         })
-        .on(VideoEvent.LOAD_START + VIDEO_EVENT, function (e) {
-            console.log('loadstart', e.target)
-        })
-        .on(VideoEvent.LOAD_ABORT + VIDEO_EVENT, function () {
+        .on(VideoEvent.LOAD_ABORT + videoNamespace, function (e) {
+            dispatch(e);
             player.play();
         })
-        .on(VideoEvent.LOAD_ERROR + VIDEO_EVENT, errorHandler)
-        .on(VideoEvent.LOAD_STALLED + VIDEO_EVENT, errorHandler);
+        .on(VideoEvent.LOAD_ERROR + videoNamespace, dispatch)
+        .on(VideoEvent.LOAD_STALLED + videoNamespace, dispatch);
 
-    };
+    }
 
 
     return VideoPlayer;
