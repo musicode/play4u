@@ -79,22 +79,20 @@ define(function (require, exports) {
 
             var mainVideo = me.mainVideo;
 
-            me.titles = lib.toArray(me.titles);
-            me.credits = lib.toArray(me.credits);
+            var titles = lib.toArray(me.titles);
+            var credits = lib.toArray(me.credits);
 
-            var hasTitles = me.titles.length > 0;
-            var hasCredits = me.credits.length > 0;
+            /**
+             * 当前播放列表
+             *
+             * @type {Array}
+             */
+            var list =
+            me.list = titles.concat([ mainVideo ], credits);
 
-            if (hasTitles) {
-                me.initTitles();
-            }
-            if (hasCredits) {
-                me.initCredits();
-            }
+            if (titles.length > 0) {
 
-            if (hasTitles) {
-
-                var first = me.titles[0];
+                var video = me.createVideo(list[0]);
                 var props = { };
 
                 if (me.autoplay) {
@@ -105,17 +103,12 @@ define(function (require, exports) {
                     props.poster = me.poster;
                 }
 
-                first.prop(props);
+                video.prop(props);
 
                 mainVideo.hide();
-            }
 
-            /**
-             * 当前播放列表
-             *
-             * @type {Array}
-             */
-            me.list = me.titles.concat([ mainVideo ], me.credits);
+                list[0] = video;
+            }
 
             me.setActiveVideo(0);
 
@@ -146,6 +139,17 @@ define(function (require, exports) {
          */
         applyShared: function (video) {
             video.prop(this.shared);
+        },
+
+        createVideo: function (url) {
+
+            var me = this;
+
+            var video = lib.createVideo(url, me.shared);
+
+            me.mainVideo.after(video);
+
+            return video;
         },
 
         /**
@@ -291,10 +295,10 @@ define(function (require, exports) {
                     element: element.find(selector.QUALITY),
                     layer: qualityPanel,
                     show: {
-                        trigger: clickType
+                        trigger: 'click'
                     },
                     hide: {
-                        trigger: clickType
+                        trigger: 'click'
                     }
                 });
             }
@@ -303,10 +307,10 @@ define(function (require, exports) {
                 element: element.find(selector.MUTE),
                 layer: element.find(selector.VOLUME_PANEL),
                 show: {
-                    trigger: clickType
+                    trigger: 'click'
                 },
                 hide: {
-                    trigger: clickType
+                    trigger: 'click'
                 }
             });
 
@@ -329,25 +333,6 @@ define(function (require, exports) {
                     pos2Volume(data.top);
                 }
             });
-
-        },
-
-        /**
-         * 初始化片头
-         */
-        initTitles: function () {
-
-            var me = this;
-
-            me.titles =
-
-            me.titles.map(
-                function (title) {
-                    var video = lib.createVideo(title, me.shared);
-                    me.mainVideo.after(video);
-                    return video;
-                }
-            );
 
         },
 
@@ -377,15 +362,15 @@ define(function (require, exports) {
 
             })
             .on(VideoEvent.LOAD_PROGRESS, function () {
-                var buffer = this.buffered;
-                if (buffer.length > 0) {
-                    var end = buffer.end(0);
-                    element
-                        .find(selector.LOAD_PROGRESS)
-                        .width(
-                            lib.percent(end, duration)
-                        );
-                }
+
+                var size = lib.loaded(this);
+
+                element
+                    .find(selector.LOAD_PROGRESS)
+                    .width(
+                        lib.percent(size, duration)
+                    );
+
             })
             .on(VideoEvent.PLAY_PROGRESS, function () {
                 me.updateCurrentTime(
@@ -394,25 +379,6 @@ define(function (require, exports) {
             });
 
             me.mainVideo = mainVideo;
-
-        },
-
-        /**
-         * 初始化片尾
-         */
-        initCredits: function () {
-
-            var me = this;
-
-            me.credits =
-
-            me.credits.map(
-                function (credit) {
-                    var video = lib.createVideo(credit, me.shared);
-                    me.mainVideo.after(video);
-                    return video;
-                }
-            );
 
         },
 
@@ -449,7 +415,18 @@ define(function (require, exports) {
                 throw new Error('setActiveVideo 参数错误');
             }
 
-            var video = list[index];
+            var index2Element = function (index) {
+                var video = list[index];
+                if (video && $.type(video) === 'string') {
+                    video = list[index] = me.createVideo(video);
+                }
+                return video;
+            };
+
+            var video = index2Element(index);
+
+            // 预加载
+            index2Element(index + 1);
 
             me.applyShared(video);
 
@@ -473,7 +450,9 @@ define(function (require, exports) {
                 me.setActiveVideo(me.mainVideo);
             }
 
-            me.video[0].play();
+            var video = me.video[0];
+
+            video.play();
         },
 
         /**
@@ -729,7 +708,7 @@ define(function (require, exports) {
         var element = player.element;
 
         var errorHandler = function (e) {
-            console.log('error type：' + e.type);
+            console.log('error type：' + e.type, e.target);
         };
 
         var playClass = selector.CLASS_PLAY;
@@ -772,6 +751,9 @@ define(function (require, exports) {
 
             player.index = index;
 
+        })
+        .on(VideoEvent.LOAD_START + VIDEO_EVENT, function (e) {
+            console.log('loadstart', e.target)
         })
         .on(VideoEvent.LOAD_ABORT + VIDEO_EVENT, function () {
             player.play();

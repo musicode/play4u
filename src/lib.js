@@ -132,6 +132,20 @@ define(function (require, exports) {
     };
 
     /**
+     * 获取视频加载
+     *
+     * @param {VideoElement} video
+     * @return {number}
+     */
+    exports.loaded = function (video) {
+        var buffered = video.buffered;
+        if (buffered.length > 0) {
+            return buffered.end(0);
+        }
+        return 0;
+    };
+
+    /**
      * 切换 class
      *
      * @param {jQuery} element
