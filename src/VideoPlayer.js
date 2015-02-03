@@ -386,6 +386,7 @@ define(function (require, exports) {
             var me = this;
 
             if (me.index === me.list.length) {
+                me.setProperty('currentTime', 0);
                 me.setActiveVideo(me.mainIndex);
             }
 
