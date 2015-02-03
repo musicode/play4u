@@ -23,22 +23,14 @@ define(function (require, exports) {
      * 高宽最好通过样式控制，脚本操作终究少了一些灵活性，
      * 加上 css3 的全面支持，几乎可实现任何效果
      *
-     * # 性能
      *
-     * 在有片头片尾的情况下，为了提升性能，需要预加载
-     *
-     * 因为必须在初始化截断获取正片的总时长（为了显示），所以正片必须占用一个 video
-     *
-     * # 片头
-     *
-     * poster 属性有一些兼容问题，所以最好模拟实现
      *
      */
 
     var lib = require('./lib');
     var selector = require('./selector');
     var VideoEvent = require('./VideoEvent');
-    var supportEvent = require('./touchClick');
+    var supportEvent = require('./click');
     var toggleClass = lib.toggleClass;
 
     var Popup = require('cobble/helper/Popup');
@@ -238,10 +230,10 @@ define(function (require, exports) {
 
             };
 
-            var eventType = supportEvent.type;
+            var clickType = supportEvent.click;
 
             element
-            .on(eventType, 'video', function () {
+            .on(clickType, 'video', function () {
                 if (me.isPaused()) {
                     me.play();
                 }
@@ -249,42 +241,42 @@ define(function (require, exports) {
                     me.pause();
                 }
             })
-            .on(eventType, '.' + selector.CLASS_PLAY, function () {
+            .on(clickType, '.' + selector.CLASS_PLAY, function () {
                 me.play();
             })
-            .on(eventType, '.' + selector.CLASS_PAUSE, function () {
+            .on(clickType, '.' + selector.CLASS_PAUSE, function () {
                 me.pause();
             })
 /**
-            .on(eventType, '.' + selector.CLASS_MUTED, function () {
+            .on(clickType, '.' + selector.CLASS_MUTED, function () {
                 me.setMute(false);
             })
-            .on(eventType, '.' + selector.CLASS_UNMUTED, function () {
+            .on(clickType, '.' + selector.CLASS_UNMUTED, function () {
                 me.setMute(true);
             })
 */
-            .on(eventType, '.' + expandClass, function () {
+            .on(clickType, '.' + expandClass, function () {
                 fullScreen.enter();
             })
-            .on(eventType, '.' + compressClass, function () {
+            .on(clickType, '.' + compressClass, function () {
                 fullScreen.exit();
             })
-            .on(eventType, selector.PROGRESS_PANEL, function (e) {
+            .on(clickType, selector.PROGRESS_PANEL, function (e) {
                 var progressPanel = element.find(selector.PROGRESS_PANEL);
                 var x = supportEvent.pageX(e) - progressPanel.offset().left;
                 pos2Time(x);
             })
-            .on(eventType, selector.VOLUME_BAR, function (e) {
+            .on(clickType, selector.VOLUME_BAR, function (e) {
                 var y = supportEvent.pageY(e) - volumeBar.offset().top;
                 pos2Volume(y);
             })
-            .on(eventType, selector.QUALITY_LOW, function () {
+            .on(clickType, selector.QUALITY_LOW, function () {
                 changeQuality('low', this);
             })
-            .on(eventType, selector.QUALITY_HIGH, function () {
+            .on(clickType, selector.QUALITY_HIGH, function () {
                 changeQuality('high', this);
             })
-            .on(eventType, selector.QUALITY_SUPER, function () {
+            .on(clickType, selector.QUALITY_SUPER, function () {
                 changeQuality('super', this);
             });
 

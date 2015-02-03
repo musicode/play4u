@@ -1,5 +1,5 @@
 /**
- * @file 点击或触摸事件
+ * @file 点击事件，如果是移动平台，切换 touch 事件
  * @author musicode
  */
 define(function (require, exports) {
@@ -7,7 +7,7 @@ define(function (require, exports) {
     'use strict';
 
     var touch = {
-        type: 'touchstart',
+        click: 'touchstart',
         pageX: function (e) {
             return e.originalEvent.touches[0].pageX;
         },
@@ -17,7 +17,7 @@ define(function (require, exports) {
     };
 
     var click = {
-        type: 'click',
+        click: 'click',
         pageX: function (e) {
             return e.pageX;
         },
