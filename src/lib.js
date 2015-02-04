@@ -98,6 +98,10 @@ define(function (require, exports) {
      */
     exports.formatTime = function (time, includeHour) {
 
+        if (time = Infinity) {
+            time = 0;
+        }
+
         var result = [ ];
 
         if (includeHour) {

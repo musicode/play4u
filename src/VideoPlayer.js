@@ -30,12 +30,12 @@ define(function (require, exports) {
     var lib = require('./lib');
     var selector = require('./selector');
     var VideoEvent = require('./VideoEvent');
-    var supportEvent = require('./click');
     var toggleClass = lib.toggleClass;
 
     var Popup = require('cobble/helper/Popup');
     var Draggable = require('cobble/helper/Draggable');
     var fullScreen = require('cobble/util/fullScreen');
+    var supportEvent = require('cobble/util/mouse');
 
     /**
      * 视频播放器
@@ -301,10 +301,10 @@ define(function (require, exports) {
                     element: element.find(selector.QUALITY),
                     layer: qualityPanel,
                     show: {
-                        trigger: 'click'
+                        trigger: clickType
                     },
                     hide: {
-                        trigger: 'click'
+                        trigger: clickType
                     }
                 });
             }
@@ -313,10 +313,10 @@ define(function (require, exports) {
                 element: element.find(selector.MUTE),
                 layer: element.find(selector.VOLUME_PANEL),
                 show: {
-                    trigger: 'click'
+                    trigger: clickType
                 },
                 hide: {
-                    trigger: 'click'
+                    trigger: clickType
                 }
             });
 
