@@ -98,7 +98,7 @@ define(function (require, exports) {
      */
     exports.formatTime = function (time, includeHour) {
 
-        if (time = Infinity) {
+        if (time === Infinity) {
             time = 0;
         }
 

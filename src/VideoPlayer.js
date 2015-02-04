@@ -386,7 +386,6 @@ define(function (require, exports) {
             var me = this;
 
             if (me.index === me.list.length) {
-                me.setProperty('currentTime', 0);
                 me.setActiveVideo(me.mainIndex);
             }
 
@@ -768,6 +767,7 @@ define(function (require, exports) {
             }
         })
         .on(VideoEvent.PAUSE + videoNamespace, function (e) {
+
             dispatch(e);
 
             if (!e.isDefaultPrevented()) {
@@ -775,6 +775,7 @@ define(function (require, exports) {
             }
         })
         .on(VideoEvent.PLAY_WAITING + videoNamespace, function (e) {
+
             dispatch(e);
 
             if (!e.isDefaultPrevented()) {
@@ -782,6 +783,7 @@ define(function (require, exports) {
             }
         })
         .on(VideoEvent.CAN_PLAY + videoNamespace, function (e) {
+
             dispatch(e);
 
             if (!e.isDefaultPrevented()) {
@@ -806,9 +808,15 @@ define(function (require, exports) {
         })
         .on(VideoEvent.PLAY_COMPLETE + videoNamespace, function (e) {
 
+            var index = player.index;
+
+            if (index === player.mainIndex) {
+                player.setProperty('currentTime', 0);
+            }
+
             dispatch(e);
 
-            var index = player.index + 1;
+            index++;
 
             if (index < player.list.length) {
                 player.setActiveVideo(index);
@@ -818,10 +826,7 @@ define(function (require, exports) {
             player.index = index;
 
         })
-        .on(VideoEvent.LOAD_ABORT + videoNamespace, function (e) {
-            dispatch(e);
-            player.play();
-        })
+        .on(VideoEvent.LOAD_ABORT + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_ERROR + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_STALLED + videoNamespace, dispatch);
 
