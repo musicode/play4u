@@ -758,34 +758,49 @@ define(function (require, exports) {
                 );
             }
         })
-        .on(VideoEvent.CAN_PLAY_THROUGH + videoNamespace, function (e) {
-            dispatch(e);
-        })
+        .on(VideoEvent.CAN_PLAY_THROUGH + videoNamespace, dispatch)
         .on(VideoEvent.PLAY + videoNamespace, function (e) {
+
             dispatch(e);
-            toggleClass(element, pauseClass, playClass);
+
+            if (!e.isDefaultPrevented()) {
+                toggleClass(element, pauseClass, playClass);
+            }
         })
         .on(VideoEvent.PAUSE + videoNamespace, function (e) {
             dispatch(e);
-            toggleClass(element, playClass, pauseClass);
+
+            if (!e.isDefaultPrevented()) {
+                toggleClass(element, playClass, pauseClass);
+            }
         })
         .on(VideoEvent.PLAY_WAITING + videoNamespace, function (e) {
             dispatch(e);
-            element.find(selector.LOADING).show();
+
+            if (!e.isDefaultPrevented()) {
+                element.find(selector.LOADING).show();
+            }
         })
         .on(VideoEvent.CAN_PLAY + videoNamespace, function (e) {
             dispatch(e);
-            element.find(selector.LOADING).hide();
+
+            if (!e.isDefaultPrevented()) {
+                element.find(selector.LOADING).hide();
+            }
         })
         .on(VideoEvent.VOLUME_CHANGE + videoNamespace, function (e) {
 
             dispatch(e);
 
-            if (player.isMuted() || player.getVolume() === 0) {
-                toggleClass(element, mutedClass, unmutedClass);
-            }
-            else {
-                toggleClass(element, unmutedClass, mutedClass);
+            if (!e.isDefaultPrevented()) {
+
+                if (player.isMuted() || player.getVolume() === 0) {
+                    toggleClass(element, mutedClass, unmutedClass);
+                }
+                else {
+                    toggleClass(element, unmutedClass, mutedClass);
+                }
+
             }
 
         })
