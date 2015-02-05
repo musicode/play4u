@@ -203,4 +203,11 @@ define(function (require, exports) {
      */
     exports.QUALITY_SUPER = '.quality-super';
 
+    /**
+     * 视频封面选择器
+     *
+     * @type {string}
+     */
+    exports.POSTER = '.video-poster';
+
 });

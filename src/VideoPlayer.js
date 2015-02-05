@@ -23,7 +23,9 @@ define(function (require, exports) {
      * 高宽最好通过样式控制，脚本操作终究少了一些灵活性，
      * 加上 css3 的全面支持，几乎可实现任何效果
      *
+     * # 封面
      *
+     * 封面有兼容问题，最好模拟实现
      *
      */
 
@@ -46,7 +48,6 @@ define(function (require, exports) {
      * @property {string} options.src 视频地址
      * @property {string=} options.poster 封面图片
      * @property {boolean=} options.autoplay 是否自动播放
-     * @property {boolean=} options.loop 是否循环播放
      * @property {Object=} options.quality 画质
      *
      * @property {Object=} options.quality.low 标清画质
@@ -88,10 +89,6 @@ define(function (require, exports) {
 
             var url = me.src;
 
-            if (titles.length > 0) {
-                lib.createVideo(url);
-            }
-
             /**
              * 播放的视频元素
              *
@@ -120,8 +117,8 @@ define(function (require, exports) {
              */
             me.mainProperty = lib.fetch(
                                 me,
-                                [ 'src', 'poster', 'autoplay', 'loop' ]
-                            );
+                                [ 'src', 'autoplay' ]
+                              );
 
 
             me.setActiveVideo(0);
@@ -161,6 +158,11 @@ define(function (require, exports) {
         initPlayer: function () {
 
             var me = this;
+
+            if (me.poster) {
+                me.setPoster(me.poster);
+            }
+
             var element = me.element;
 
             var quality = me.quality;
@@ -171,12 +173,9 @@ define(function (require, exports) {
             var volumeBar = element.find(selector.VOLUME_BAR);
             var volumeHandle = element.find(selector.VOLUME_HANDLE);
 
-            var currentQuality = element.find(selector.CURRENT_QUALITY);
-
-            var expandClass = selector.CLASS_EXPAND;
-            var compressClass = selector.CLASS_COMPRESS;
-            var fullScreenClass = selector.CLASS_FULLSCREEN;
-            var activeQualityClass = selector.CLASS_QUALITY_ACTIVE;
+            var playVideo = function () {
+                me.play();
+            };
 
             var pos2Time = function (pos) {
 
@@ -213,27 +212,11 @@ define(function (require, exports) {
 
             };
 
-            var changeQuality = function (type, target) {
-
-                var data = quality[type];
-
-                me.setProperty('src', data.url);
-                currentQuality.text(data.text);
-
-                qualityPanel
-                    .find('.' + activeQualityClass)
-                    .removeClass(activeQualityClass);
-
-                $(target).addClass(activeQualityClass);
-
-                qualityPopup.close();
-
-            };
-
             var clickType = supportEvent.click;
 
+            // 在大块面积上慎用 touch，因为一碰就会播放，无法平移操作
             element
-            .on(clickType, 'video', function () {
+            .on('click', 'video', function () {
                 if (me.isPaused()) {
                     me.play();
                 }
@@ -241,9 +224,8 @@ define(function (require, exports) {
                     me.pause();
                 }
             })
-            .on(clickType, '.' + selector.CLASS_PLAY, function () {
-                me.play();
-            })
+            .on('click', selector.POSTER, playVideo)
+            .on(clickType, '.' + selector.CLASS_PLAY, playVideo)
             .on(clickType, '.' + selector.CLASS_PAUSE, function () {
                 me.pause();
             })
@@ -255,10 +237,10 @@ define(function (require, exports) {
                 me.setMute(true);
             })
 */
-            .on(clickType, '.' + expandClass, function () {
+            .on(clickType, '.' + selector.CLASS_EXPAND, function () {
                 fullScreen.enter();
             })
-            .on(clickType, '.' + compressClass, function () {
+            .on(clickType, '.' + selector.CLASS_COMPRESS, function () {
                 fullScreen.exit();
             })
             .on(clickType, selector.PROGRESS_PANEL, function (e) {
@@ -271,35 +253,31 @@ define(function (require, exports) {
                 pos2Volume(y);
             })
             .on(clickType, selector.QUALITY_LOW, function () {
-                changeQuality('low', this);
+                me.setQuality('low');
             })
             .on(clickType, selector.QUALITY_HIGH, function () {
-                changeQuality('high', this);
+                me.setQuality('high');
             })
             .on(clickType, selector.QUALITY_SUPER, function () {
-                changeQuality('super', this);
+                me.setQuality('super');
             });
 
             fullScreen.change(function (isFullScreen) {
 
                 if (isFullScreen) {
-                    toggleClass(element, compressClass, expandClass);
-                    element.addClass(fullScreenClass);
+                    me.enterFullScreen();
                 }
                 else {
-                    toggleClass(element, expandClass, compressClass);
-                    element.removeClass(fullScreenClass);
+                    me.exitFullScreen();
                 }
 
             });
 
             if (quality) {
 
-                var qualityPanel = element.find(selector.QUALITY_PANEL);
-
-                var qualityPopup = new Popup({
+                me.qualityPopup = new Popup({
                     element: element.find(selector.QUALITY),
-                    layer: qualityPanel,
+                    layer: element.find(selector.QUALITY_PANEL),
                     show: {
                         trigger: clickType
                     },
@@ -343,6 +321,81 @@ define(function (require, exports) {
         },
 
         /**
+         * 进入全屏
+         */
+        enterFullScreen: function () {
+
+            var me = this;
+            var element = me.element;
+
+            me.isFullscreen = false;
+
+            toggleClass(element, selector.CLASS_COMPRESS, selector.CLASS_EXPAND);
+            element.addClass(selector.CLASS_FULLSCREEN);
+
+            element.trigger(VideoEvent.EXIT_FULLSCREEN);
+
+        },
+
+        /**
+         * 退出全屏
+         */
+        exitFullScreen: function () {
+
+            var me = this;
+            var element = me.element;
+
+            me.isFullscreen = true;
+
+            toggleClass(element, selector.CLASS_EXPAND, selector.CLASS_COMPRESS);
+            element.removeClass(selector.CLASS_FULLSCREEN);
+
+            element.trigger(VideoEvent.ENTER_FULLSCREEN);
+
+        },
+
+        /**
+         * 设置画质
+         *
+         * @param {string} type 可选值包括 low high super
+         */
+        setQuality: function (type) {
+
+            var me = this;
+            var quality = me.quality;
+
+            if (!quality || !quality[ type ]) {
+                throw new Error('[setQuality] 找不到 ' + type + ' 画质.');
+            }
+
+            var data = quality[ type ];
+
+            me.setProperty('src', data.url);
+
+            me.element
+                .find(selector.CURRENT_QUALITY)
+                .text(data.text);
+
+            var qualityPopup = me.qualityPopup;
+
+            var qualityPanel = qualityPopup.layer;
+            var activeQualityClass = selector.CLASS_QUALITY_ACTIVE;
+
+            qualityPanel
+                .find('.' + activeQualityClass)
+                .removeClass(activeQualityClass);
+
+            qualityPanel
+                .find(qualitySelector[ type ])
+                .addClass(activeQualityClass);
+
+            if (!qualityPopup.hidden) {
+                qualityPopup.close();
+            }
+
+        },
+
+        /**
          * 设置当前激活的视频
          *
          * @param {number} index
@@ -375,6 +428,35 @@ define(function (require, exports) {
             listen(me, video);
 
             me.index = index;
+
+        },
+
+        /**
+         * 获取封面地址
+         *
+         * @return {string}
+         */
+        getPoster: function () {
+            return this.poster || '';
+        },
+
+        /**
+         * 设置封面地址
+         *
+         * @param {string} poster
+         */
+        setPoster: function (poster) {
+
+            var me = this;
+
+            me.poster = poster;
+
+            var posterElement = me.element.find(selector.POSTER);
+
+            posterElement.css(
+                'background-image',
+                'url(' + poster + ')'
+            );
 
         },
 
@@ -700,6 +782,18 @@ define(function (require, exports) {
      */
     var videoNamespace = '.video_player';
 
+    /**
+     * 画质选择器
+     *
+     * @inner
+     * @type {Object}
+     */
+    var qualitySelector = {
+        low: selector.QUALITY_LOW,
+        high: selector.QUALITY_HIGH,
+        super: selector.QUALITY_SUPER
+    };
+
 
     function listen(player, video) {
 
@@ -712,14 +806,10 @@ define(function (require, exports) {
         var unmutedClass = selector.CLASS_UNMUTED;
 
         var dispatch = function (e) {
-            e.player = player;
             element.trigger(e);
         };
 
         video
-        .on(VideoEvent.LOAD_START + videoNamespace, function (e) {
-            dispatch(e);
-        })
         .on(VideoEvent.LOAD_META_COMPLETE + videoNamespace, function (e) {
 
             dispatch(e);
@@ -757,10 +847,14 @@ define(function (require, exports) {
                 );
             }
         })
-        .on(VideoEvent.CAN_PLAY_THROUGH + videoNamespace, dispatch)
         .on(VideoEvent.PLAY + videoNamespace, function (e) {
 
             dispatch(e);
+
+            var posterElement = element.find(selector.POSTER);
+            if (posterElement.is(':visible')) {
+                posterElement.hide();
+            }
 
             if (!e.isDefaultPrevented()) {
                 toggleClass(element, pauseClass, playClass);
@@ -826,6 +920,8 @@ define(function (require, exports) {
             player.index = index;
 
         })
+        .on(VideoEvent.CAN_PLAY_THROUGH + videoNamespace, dispatch)
+        .on(VideoEvent.LOAD_START + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_ABORT + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_ERROR + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_STALLED + videoNamespace, dispatch);

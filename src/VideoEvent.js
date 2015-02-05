@@ -160,6 +160,21 @@ define(function (require, exports) {
      */
     VideoEvent.VOLUME_CHANGE = 'volumechange';
 
+    /**
+     * 进入全屏
+     *
+     * @static
+     * @type {string}
+     */
+    VideoEvent.ENTER_FULLSCREEN = 'enterfullscreen';
+
+    /**
+     * 退出全屏
+     *
+     * @static
+     * @type {string}
+     */
+    VideoEvent.EXIT_FULLSCREEN = 'exitfullscreen';
 
     return VideoEvent;
 
