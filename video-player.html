@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <link rel="stylesheet" href="videoPlayer/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="video-player">
+
+        <video></video>
+
+        <div class="load-spinner">
+            <div class="spinner">
+                <div class="spinner-container container1">
+                    <div class="circle1"></div>
+                    <div class="circle2"></div>
+                    <div class="circle3"></div>
+                    <div class="circle4"></div>
+                </div>
+                <div class="spinner-container container2">
+                    <div class="circle1"></div>
+                    <div class="circle2"></div>
+                    <div class="circle3"></div>
+                    <div class="circle4"></div>
+                </div>
+                <div class="spinner-container container3">
+                    <div class="circle1"></div>
+                    <div class="circle2"></div>
+                    <div class="circle3"></div>
+                    <div class="circle4"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-bar">
+
+            <a class="logo-control" href="http://genshuixue.com" target="_blank">
+                <i class="logo-icon"></i>
+            </a>
+
+            <div class="fullscreen-control">
+                <i class="expand-icon"></i>
+            </div>
+
+            <div class="quality-control">
+                <span class="current-quality">标清</span>
+                <ul>
+                    <li class="quality-low active" data-text="标清">标清</li>
+                    <li class="quality-high" data-text="高清">高清</li>
+                    <li class="quality-super" data-text="超清">超清</li>
+                </ul>
+            </div>
+
+            <div class="mute-control">
+                <i class="volume-up-icon"></i>
+
+                <div class="volume-panel">
+                    <div class="volume-bar">
+                        <div class="volume-progress"></div>
+                        <div class="volume-handle"></div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="button-control">
+                <i class="play-icon"></i>
+            </div>
+
+            <div class="time-control">
+                <span class="current-time">00:00</span>
+                /
+                <span class="duration">00:00</span>
+            </div>
+<!--
+            <div class="title-control">
+                哈哈哈哈
+            </div>
+-->
+            <div class="progress-panel">
+                <div class="progress-bar">
+                    <div class="load-progress"></div>
+                    <div class="play-progress"></div>
+                    <div class="seek-handle"></div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="http://s1.bdstatic.com/r/www/cache/ecom/esl/2-0-2/esl.js"></script>
+
+    <script>
+        require.config({
+            baseUrl: './videoPlayer',
+            paths: {
+                cobble: 'http://cdn.gsxservice.com/dep/cobble/0.3.9/src'
+            }
+        });
+
+        var letvcloud_player_conf =  {
+            uu: '425d013193',
+            vu: '609f187ea4',
+            width: 650,
+            height: 416,
+            auto_play: 0,
+            gpcflag: 1,
+
+            start: 'http://d.gsxservice.com/video/files/start.mp4',
+            end: 'http://d.gsxservice.com/video/files/over.mp4'
+        };
+
+        require(['letv'], function (letv) {
+            letv.init();
+        });
+    </script>
+
+</body>
+</html>

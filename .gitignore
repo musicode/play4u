@@ -6,3 +6,4 @@ package.json
 src/letv.js
 *.mp3
 *.mp4
+*.png
