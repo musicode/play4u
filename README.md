@@ -17,8 +17,7 @@
 
     <div class="control-bar">
 
-        <a class="logo-control" href="" target="_blank">
-        </a>
+        <a class="logo-control" href="" target="_blank"></a>
 
         <div class="fullscreen-control">
             <i class="expand-icon"></i>
