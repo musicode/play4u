@@ -71,7 +71,6 @@ define(function (require, exports) {
     /**
      * 复制一个相同属性的视频
      *
-     * @inner
      * @param {string} url
      * @param {Object} property
      * @return {jQuery}
