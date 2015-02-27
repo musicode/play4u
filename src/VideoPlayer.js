@@ -37,7 +37,11 @@ define(function (require, exports) {
     var Popup = require('cobble/helper/Popup');
     var Draggable = require('cobble/helper/Draggable');
     var fullScreen = require('cobble/util/fullScreen');
-    var supportEvent = require('cobble/util/mouse');
+    var supportEvents = require('cobble/util/mouse');
+
+    var supportEvent = 'onorientationchange' in window
+                     ? supportEvents.touch
+                     : supportEvents.mouse;
 
     /**
      * 视频播放器
@@ -279,10 +283,10 @@ define(function (require, exports) {
                     element: element.find(selector.QUALITY),
                     layer: element.find(selector.QUALITY_PANEL),
                     show: {
-                        trigger: clickType
+                        trigger: 'click'
                     },
                     hide: {
-                        trigger: clickType
+                        trigger: 'click'
                     }
                 });
             }
@@ -291,10 +295,10 @@ define(function (require, exports) {
                 element: element.find(selector.MUTE),
                 layer: element.find(selector.VOLUME_PANEL),
                 show: {
-                    trigger: clickType
+                    trigger: 'click'
                 },
                 hide: {
-                    trigger: clickType
+                    trigger: 'click'
                 }
             });
 
@@ -806,6 +810,7 @@ define(function (require, exports) {
         var unmutedClass = selector.CLASS_UNMUTED;
 
         var dispatch = function (e) {
+            console.log(e.type)
             element.trigger(e);
         };
 
@@ -815,15 +820,8 @@ define(function (require, exports) {
             dispatch(e);
 
             if (!e.isDefaultPrevented()) {
-                var duration = this.duration;
-
-                player.setProperty(
-                    'duration',
-                    duration
-                );
-
                 player.updateDuration(
-                    duration
+                    this.duration
                 );
             }
         })
@@ -922,8 +920,8 @@ define(function (require, exports) {
         })
         .on(VideoEvent.CAN_PLAY_THROUGH + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_START + videoNamespace, dispatch)
-        .on(VideoEvent.LOAD_ABORT + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_ERROR + videoNamespace, dispatch)
+        .on(VideoEvent.LOAD_ABORT + videoNamespace, dispatch)
         .on(VideoEvent.LOAD_STALLED + videoNamespace, dispatch);
 
     }
